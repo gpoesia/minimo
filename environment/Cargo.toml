@@ -1,0 +1,28 @@
+[package]
+name = "peano"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "peano"
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+colored = "2.0.0"
+itertools = "0.10.5"
+linear-map = "1.2.0"
+num-rational = "0.4.1"
+pest = "2.5"
+pest_derive = "2.5"
+# pyo3 = { version = "0.19.0", features = ["extension-module"] }
+rand = "0.8.5"
+rand_pcg = "0.3.1"
+rustyline = "11.0.0"
+smallset = "0.1.1"
+smallvec = "1.10.0"
+
+[dependencies.pyo3]
+version = "0.20.2"
+features = ["abi3-py38"]

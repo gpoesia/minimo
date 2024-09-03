@@ -1,0 +1,16 @@
+# Vanilla MCTS agent
+
+type: mcts
+
+node_type: vanilla
+max_mcts_nodes: 50000
+expansions: 50000
+max_searches: 1
+max_examples: 50
+
+policy:
+    type: Uniform
+
+defaults:
+    - _self_
+    - curiosity: constant

@@ -1,0 +1,20 @@
+task: proofsearch
+
+problemset: natural-number-game
+
+max_problems: 1000
+accumulate_library: false
+
+agent:
+    max_mcts_nodes: 50000
+
+defaults:
+    - _self_
+    - agent: mcts
+
+job:
+    wandb_project: peano
+
+hydra:
+    job:
+        chdir: true

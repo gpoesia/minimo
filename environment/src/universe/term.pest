@@ -1,0 +1,59 @@
+// Terms grammar
+
+context = { SOI ~ (import | definition | verify | proof | annotation | using)* ~ EOI }
+
+import = { "import" ~ import_path ~ PERIOD }
+import_path = @{ STRING }
+using = { "using" ~ atom ~ ("," ~ atom)* ~ PERIOD }
+
+term = _{ lambda | application | atom | arrow }
+
+definition = { (assume | declaration ~ ("=" ~ term)?) ~ "." }
+
+lambda = { "(" ~ "lambda" ~ "(" ~ declaration ~ ("," ~ declaration)* ~ ")" ~ term ~ ")" }
+declaration = { ("let" | "axiom")? ~ atom ~ ":" ~ ttype }
+pattern_declaration = { ttype ~ ":" ~ ttype }
+assume = { "assume" ~ ttype }
+
+ttype = _{ atom | application | arrow }
+arrow = { "[" ~ (arrow_input_type ~ "->" )+ ~ ttype ~ "]" }
+
+arrow_input_type = _{ ttype | ( "(" ~ declaration ~ ")" ) }
+
+application = { "(" ~ term ~ term+ ~ ")" }
+
+atom = @{ ('0'..'9' | 'a'..'z' | 'A'..'Z' | "'"
+                    | "_" | "-" | "+" | "/" | "*" | "="
+                    | "!" | "$" | "^" | ">" | "<" )+ }
+
+// Verification script
+verify = { ("verify" | "example" | "test") ~ atom ~ "{" ~ verification_script ~ "}" }
+proof = { ("theorem" | "lemma" | "corollary") ~ atom ~ ":" ~ ttype ~ "{" ~ proof_actions ~ "}" }
+
+verification_script = { verification_instruction* }
+proof_actions = { proof_action* }
+
+annotation = _{ "#" ~ (forward | backward) ~ "." }
+
+forward = { "forward" ~ atom ~ ("(" ~ pattern_declaration ~ ")")* }
+backward = { "backward" ~ atom ~ (INFER | SUBGOAL)* }
+
+verification_instruction = _{ show | construct | definition }
+proof_action = _{ apply | construct | show | intro | check_goal | have | prove_goal | halt | using }
+
+apply = { "apply" ~ atom ~ PERIOD}
+construct = { "construct" ~ atom ~ ":" ~ ttype ~ "=" ~ term ~ "by" ~ atom ~ PERIOD}
+show = { "show" ~ ttype ~ "by" ~ atom ~ PERIOD}
+intro = { "intro" ~ atom ~ ":" ~ ttype ~ PERIOD}
+check_goal = { "current goal" ~ ":" ~ term ~ PERIOD}
+prove_goal = { "goal" ~ term ~ "{" ~ proof_actions ~ "}" }
+have = { "have" ~ term ~ "{" ~ proof_actions ~ "}" }
+halt = { "halt" ~ PERIOD }
+
+INFER = {"infer"}
+SUBGOAL = {"subgoal"}
+
+WHITESPACE = _{ " " | "\n" | "\t" | "\r" }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+STRING = _{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+PERIOD = _{"."}

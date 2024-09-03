@@ -1,0 +1,23 @@
+# Count-based curiosity agent.
+
+type: curiosity
+node_type: holophrasm
+iterations: 2
+max_mcts_nodes: 50000
+expansions: 50000
+max_searches: 1
+max_examples: 1000
+checkpoint_every: 100
+checkpoint_dir: "checkpoints"
+
+policy:
+    type: LM
+    lr: 1e-4
+    value_prior_weight: 10
+    max_pos_neg_ratio: 10
+    train_iterations: 100
+    batch_size: 5000
+
+defaults:
+    - _self_
+    - curiosity: transition-logprob

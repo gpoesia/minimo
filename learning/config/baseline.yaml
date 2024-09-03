@@ -1,0 +1,7 @@
+agent:
+    node_type: vanilla
+    max_mcts_nodes: 50000
+    max_searches: 1
+
+    policy:
+        type: Uniform

@@ -1,0 +1,24 @@
+task: teacher
+
+defaults:
+    - _self_
+    - agent: mcts-lm
+    - theory: propositional-logic
+
+iterations: 5
+n_conjectures: 200
+
+difficulty_buckets:
+    - hard: 20
+    - easy: 50
+    - triv: 100
+
+train_policy_on_hindsight_examples: true
+freeze_conjecturer: false
+
+job:
+    wandb_project: peano
+
+hydra:
+    job:
+        chdir: true

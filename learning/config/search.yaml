@@ -1,0 +1,4 @@
+domain: comb-like
+range: [0, 200]
+output: episodes.pkl
+algorithm: policy-beam-search

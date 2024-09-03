@@ -1,0 +1,15 @@
+altair
+bottle
+coloraide
+hydra-core
+maturin
+numpy
+omegaconf
+redis
+rq
+sympy
+torch
+tqdm
+transformers
+wandb
+celery

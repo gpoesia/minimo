@@ -1,0 +1,17 @@
+# Count-based curiosity agent.
+
+type: curiosity
+node_type: vanilla
+max_mcts_nodes: 50000
+expansions: 50000
+max_searches: 1
+max_examples: 1000
+checkpoint_every: 100
+checkpoint_dir: "checkpoints"
+
+policy:
+    type: Uniform
+
+defaults:
+    - _self_
+    - curiosity: invfreq

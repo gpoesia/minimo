@@ -1,0 +1,22 @@
+task: proofsearch
+
+problemset: natural-number-game
+
+max_problems: 1000
+accumulate_library: false
+
+iterations: 4
+problems:
+    - a_succ_add
+    - a_add_assoc
+    - a_add_comm
+
+defaults:
+    - agent: curiosity-count
+
+job:
+    wandb_project: peano
+
+hydra:
+    job:
+        chdir: true

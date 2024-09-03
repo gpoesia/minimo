@@ -1,0 +1,3 @@
+tactics: tactics-19.pkl
+episodes: searcher0.pt
+output: peano-solutions.json

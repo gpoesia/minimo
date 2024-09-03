@@ -1,0 +1,14 @@
+task: test
+
+domain: nat-add
+tactics: null
+output: nat-add-episodes.pkl
+
+searcher:
+    model_type: random-policy
+    model_path: null
+    epsilon: 0.0
+    max_depth: 16
+    max_nodes: 1000000
+    seed_interval: [0, 100]
+    device: "cpu"

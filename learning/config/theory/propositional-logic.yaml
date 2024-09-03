@@ -1,0 +1,3 @@
+name: propositional-logic
+premises: ['and_i', 'and_el', 'and_er', 'or_il', 'or_ir', 'or_e', 'not_i', 'not_e',
+           'exfalso', 'iff_i', 'iff_el', 'iff_er', 'em']

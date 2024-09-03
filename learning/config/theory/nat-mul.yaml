@@ -1,0 +1,2 @@
+name: nat-mul
+premises: ['eq_refl', 'eq_symm', 'rewrite', '+_z', '+_s', '*_s', '*_z', 'nat_ind']

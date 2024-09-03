@@ -1,0 +1,17 @@
+# Expert Iteration agent.
+
+type: exit
+node_type: vanilla
+max_mcts_nodes: 5000
+max_searches: 1
+max_examples: 200
+checkpoint_every: 10
+checkpoint_dir: "checkpoints"
+
+policy:
+    type: LM
+    lr: 1e-4
+    value_prior_weight: 10
+    max_pos_neg_ratio: 10
+    train_iterations: 100
+    batch_size: 5000

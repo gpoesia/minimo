@@ -1,0 +1,2 @@
+name: groups
+premises: ['op_assoc', 'op_comm', 'id_l', 'inv_l', 'eq_refl', 'eq_symm', 'rewrite']
