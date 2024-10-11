@@ -36,7 +36,7 @@ With `maturin` you can now compile both the Peano environment and library with i
 
 ```sh
 [peano] $ cd environment
-[environment] $ maturin dev  # This will compile the Peano library.
+[environment] $ maturin dev --release  # This will compile the Peano library.
 [...]
 [environment] $ cargo build --bin peano --release  # This compiles the peano executable.
 ```
