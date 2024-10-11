@@ -7,7 +7,6 @@ import functools
 import time
 import math
 
-from tqdm import tqdm
 import numpy as np
 import hydra
 from omegaconf import DictConfig
@@ -27,6 +26,7 @@ from action import ProofAction
 class GeneratedProofAction:
     action: str
     children: Optional['GeneratedProofScript']
+
 
 @dataclass
 class GeneratedProofScript:
