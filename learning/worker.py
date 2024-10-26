@@ -43,6 +43,7 @@ app.conf.accept_content = ['application/json', 'application/x-python-serialize']
 
 @app.task
 def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> StudentResult:
+    breakpoint()
     with io.BytesIO(agent_dump) as f:
         agent = torch.load(f)
 
@@ -60,6 +61,7 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
                 agent_result.root.get_solution_actions())
             solution_actions = agent_result.root.get_solution_actions()
             logprob = agent_result.root.solution_logprob_under_policy(agent._policy, solution_actions)
+            # TODO mihir, use same way to get log_probs of ideal theorem while conjecturing
         else:
             solution_actions, proof, logprob = None, None, None
 

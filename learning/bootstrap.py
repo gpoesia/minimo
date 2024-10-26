@@ -236,12 +236,14 @@ async def teacher_loop(cfg: DictConfig):
             log.write('\n')
 
             # 3c- Train model on conjecturing and proof search examples.
+            # TODO mihir, measure progress towards goal here.
+            # TODO mihir, find alpha parameter
             if i + 1 < cfg.iterations:
                 print(len(examples), 'accumulated training examples.')
                 agent.train(examples)
+            save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
-            save_json(outcomes, f'outcomes_{i}.json')
             torch.save(student_results, f'results_{i}.json')
 
 

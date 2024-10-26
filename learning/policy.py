@@ -74,7 +74,7 @@ class TransformerLMPolicy(nn.Module):
         for i in rng:
             b = sample_batch(examples, batch_size)
             self._optimizer.zero_grad()
-            loss = self.get_loss(b)
+            loss = self.get_loss(b) # TODO mihir, add our loss term to this 
             loss.backward()
             wandb.log({'train_loss': loss})
             self._optimizer.step()
