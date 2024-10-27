@@ -1,9 +1,7 @@
 final goals:
-  - "a_succ_add. [('a : nat) -> ('b : nat) -> (= (+ (s 'a) 'b) (s (+ 'a 'b)))]"
-  - "a_succ_eq_add_one. [('n : nat) -> (= (s 'n) (+ 'n (s z)))]"
-  - "m_zero_mul. [('m : nat) -> (= (* z 'm) z)]"
-  - "m_mul_one. [('m : nat) -> (= (* 'm (s z)) 'm)]"
+  - "[('a0 : nat) -> ('a1 : nat) -> (= (+ (s 'a0) 'a1) (s (+ 'a0'a1)))]"
+  - "[('a0 : nat) -> (= (s 'a0) (+ 'a0 (s z)))]"
+  - "[('a0 : nat) -> (= (* z 'a0) z)]"
+  - "[('a0 : nat) -> (= (* 'a0 (s z)) 'a0)]"
 
 
-
-["[('a0 : prop) -> (= (+ z (s (s (s z)))) z)]", '(= (s (+ (s (+ (s z) z)) z)) z)', "[('a0 : nat) -> (= z 'a0)]", "[('a0 : nat) -> (= z (+ 'a0 'a0))]", "[('a0 : nat) -> (= (+ 'a0 'a0) (+ 'a0 'a0))]", "[('a0 : prop) -> 'a0]", "[('a0 : prop) -> (= (+ z (s (s (s z)))) (+ z (s (s (s z)))))]", "[('a0 : nat) -> (= (= nat z 'a0) (= nat z 'a0))]", "[('a0 : prop) -> ('a1 : (= 'a0 (= prop 'a0 'a0))) -> ('a2 : prop) -> 'a0]", "[('a0 : nat) -> (= z z)]", "[('a0 : nat) -> (= (+ 'a0 z) 'a0)]", "[('a0 : prop) -> ('a1 : prop) -> 'a0]", "[('a0 : prop) -> (= 'a0 'a0)]", "[('a0 : (= (+ z z) z)) -> ('a1 : prop) -> 'a1]", "[('a0 : prop) -> (= (+ z z) (s (+ z z)))]", "[('a0 : prop) -> (= (+ z (s (s z))) (s (+ z (s z))))]", "[('a0 : prop) -> (= (+ z (s (s (+ z z)))) z)]", "[('a0 : prop) -> (= (s z) z)]", "[('a0 : (= (+ z z) z)) -> (= z (+ z z))]", "[('a0 : (= (+ z z) z)) -> (= (+ z (s (s (s z)))) z)]"]

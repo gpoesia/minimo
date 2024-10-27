@@ -241,7 +241,7 @@ async def teacher_loop(cfg: DictConfig):
 
             # 3c- Train model on conjecturing and proof search examples.
             # TODO mihir, find alpha parameter
-            alpha = 1.0
+            alpha = cfg.get('alpha', 0.)
             if i + 1 < cfg.iterations:
                 print(len(examples), 'accumulated training examples.')
                 agent.train(examples, final_goals, alpha)

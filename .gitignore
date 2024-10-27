@@ -3,3 +3,5 @@ release-list.txt
 environment/target
 */_*
 learning/outputs
+outputs/
+slurm*

@@ -67,8 +67,6 @@ class TransformerLMPolicy(nn.Module):
         self._lm.train()
 
         rng = range(n_steps)
-        # TODO mihir, measure progress towards goal here.
-        progress = self.get_loss(final_goals).item() # slightly unintuitive naming, because the lower this is, the closer we are to the goal 
 
         if verbose:
             rng = tqdm(rng)
@@ -76,9 +74,13 @@ class TransformerLMPolicy(nn.Module):
         for i in rng:
             b = sample_batch(examples, batch_size)
             self._optimizer.zero_grad()
-            loss = self.get_loss(b) + alpha * progress # TODO mihir, add our loss term to this 
+            # TODO mihir, add our loss term to this 
+            train_loss = self.get_loss(b) 
+            # TODO mihir, measure progress towards goal here.
+            progress = self.get_loss(final_goals) # slightly unintuitive naming, because the lower this is, the closer we are to the goal 
+            loss = (1. - alpha) * train_loss + alpha * progress 
             loss.backward()
-            wandb.log({'train_loss': loss})
+            wandb.log({'train_loss': train_loss, 'loss': loss, 'progress_loss': progress, 'alpha': alpha})
             self._optimizer.step()
 
         self._lm.eval()
