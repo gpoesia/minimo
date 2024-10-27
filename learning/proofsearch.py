@@ -796,8 +796,8 @@ class LMPolicy(Policy):
         return examples
 
 
-    def train(self, examples, verbose=True):
-        self._lm.fit(examples, self._batch_size, self._train_batches, verbose)
+    def train(self, examples, final_goals=None, alpha=0., verbose=True):
+        self._lm.fit(examples, final_goals, alpha, self._batch_size, self._train_batches, verbose)
         self._lm.eval()
 
 
@@ -1020,7 +1020,7 @@ class ProofSearchAgent:
 
         return ProofSearchResult(problem, solved, root, examples, iterations)
 
-    def train(self, examples=None):
+    def train(self, examples=None, final_goals=None, alpha=0.):
         examples = examples or self._examples
 
         if self._training_its % self._checkpoint_every == 0:
@@ -1037,7 +1037,7 @@ class ProofSearchAgent:
                 else:
                     assert isinstance(e, str), f'{type(e)} is not a string.'
                     example_strs.append(e)
-            self._policy.train(example_strs)
+            self._policy.train(example_strs, final_goals, alpha)
 
         self._training_its += 1
 

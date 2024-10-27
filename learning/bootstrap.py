@@ -7,6 +7,7 @@ import os
 import io
 import json
 import datetime
+import yaml
 
 import hydra
 from omegaconf import DictConfig
@@ -49,8 +50,11 @@ def get_task_result(task):
 
 async def teacher_loop(cfg: DictConfig):
     print('Running in', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
-
     agent = make_agent(cfg)
+
+    # TODO mihir, load goals from yaml file.
+    with open(os.path.join(os.path.dirname(__file__), 'final_goals.yaml'), 'r') as f:
+        final_goals = yaml.safe_load(f)["final goals"]
 
     with open(os.path.join(os.path.dirname(__file__), 'theories', cfg.theory.name + '.p')) as f:
         theory = f.read()
@@ -236,11 +240,11 @@ async def teacher_loop(cfg: DictConfig):
             log.write('\n')
 
             # 3c- Train model on conjecturing and proof search examples.
-            # TODO mihir, measure progress towards goal here.
             # TODO mihir, find alpha parameter
+            alpha = 1.0
             if i + 1 < cfg.iterations:
                 print(len(examples), 'accumulated training examples.')
-                agent.train(examples)
+                agent.train(examples, final_goals, alpha)
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')

@@ -5,8 +5,8 @@ defaults:
     - agent: mcts-lm
     - theory: propositional-logic
 
-iterations: 10
-n_conjectures: 200
+iterations: 3
+n_conjectures: 20
 
 difficulty_buckets:
     - hard: 20

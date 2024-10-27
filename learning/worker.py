@@ -43,7 +43,6 @@ app.conf.accept_content = ['application/json', 'application/x-python-serialize']
 
 @app.task
 def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> StudentResult:
-    breakpoint()
     with io.BytesIO(agent_dump) as f:
         agent = torch.load(f)
 

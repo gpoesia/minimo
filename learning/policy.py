@@ -63,10 +63,12 @@ class TransformerLMPolicy(nn.Module):
         attn_mask = input_ids != PAD
         return self._lm.forward(input_ids, attention_mask=attn_mask, labels=labels).loss
 
-    def fit(self, examples, batch_size, n_steps, verbose=False):
+    def fit(self, examples, final_goals, alpha, batch_size, n_steps, verbose=False):
         self._lm.train()
 
         rng = range(n_steps)
+        # TODO mihir, measure progress towards goal here.
+        progress = self.get_loss(final_goals).item() # slightly unintuitive naming, because the lower this is, the closer we are to the goal 
 
         if verbose:
             rng = tqdm(rng)
@@ -74,7 +76,7 @@ class TransformerLMPolicy(nn.Module):
         for i in rng:
             b = sample_batch(examples, batch_size)
             self._optimizer.zero_grad()
-            loss = self.get_loss(b) # TODO mihir, add our loss term to this 
+            loss = self.get_loss(b) + alpha * progress # TODO mihir, add our loss term to this 
             loss.backward()
             wandb.log({'train_loss': loss})
             self._optimizer.step()
