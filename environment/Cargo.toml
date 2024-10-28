@@ -25,4 +25,4 @@ smallvec = "1.10.0"
 
 [dependencies.pyo3]
 version = "0.20.2"
-features = ["abi3-py38"]
+features = ["extension-module"]
