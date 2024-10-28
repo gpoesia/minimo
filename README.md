@@ -1,7 +1,8 @@
-# Learning Formal Mathematics From Intrinsic Motivation
+# Goal-Conditionally Learning Formal Mathematics From Intrinsic Motivation
 
-This is the implementation of the following paper:
+This repository implements a first approach to goal-conditioned self-improvement. We extend the [minimo repository](https://github.com/gpoesia/minimo) with goal-conditioning and show that our approach to goal-conditioning leads to meaningfully faster convergence to solutions to human-input problems. We will soon publish an accompanying blog post on [our blog](https://pdoom.org/blog.html).
 
+The upstream `minimo` repository is based on the following paper:
 ```bibtex
 @article{poesia2024learning,
   title={Learning Formal Mathematics From Intrinsic Motivation},
@@ -11,7 +12,9 @@ This is the implementation of the following paper:
 }
 ```
 
-You can find it on [arXiv](https://arxiv.org/abs/2407.00695). This repository builds on the [original Peano code base](https://github.com/gpoesia/peano), though it stands alone.
+The rest of the `README` is from the upstream repository.
+
+---
 
 ### Compiling the environment
 
