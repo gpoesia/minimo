@@ -58,7 +58,7 @@ def get_alpha(i: int, cfg: DictConfig, conjectures_proved_ratio: float = None) -
         return cfg.alpha * ((i / max_iterations) ** 2)
     elif cfg.alpha_schedule == 'cubic':
         return cfg.alpha * ((i / max_iterations) ** 3)
-    elif cfg.alpha_schedule == 'proved_ratio' and conjectures_proved_ratio is not None:
+    elif cfg.alpha_schedule == 'ratio' and conjectures_proved_ratio is not None:
         return cfg.alpha * conjectures_proved_ratio
 
 async def teacher_loop(cfg: DictConfig):
@@ -166,8 +166,14 @@ async def teacher_loop(cfg: DictConfig):
             print('Final goals proven:', len(success_logprobs_final), 'out of', len(final_goals))
             wandb.log({'final_goals_proven': len(success_logprobs_final), 'iteration': i})
 
+            # TODO mihir, terminate the learning loop if all final goals are proven
+            if len(success_logprobs_final) == len(final_goals):
+                print('All final goals proven - stopping learning loop...')
+                break
+
             success_logprobs, outcomes, student_results, examples = get_log_probs(agent_dump, conjectures, theory, premises, outcomes, i)
             
+            # TODO mihir, add final goals to the list of proven conjectures
             student_results.extend(student_results_final)
             examples.extend(examples_final)
             outcomes.extend(outcomes_final)

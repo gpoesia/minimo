@@ -6,15 +6,15 @@ defaults:
     - theory: propositional-logic
 
 iterations: 10
-n_conjectures: 20
+n_conjectures: 50
 
 alpha: 1.0
-alpha_schedule: constant
+alpha_schedule: constant # [constant, linear, quadratic, cubic, ratio]
 
 difficulty_buckets:
-    - hard: 20
-    - easy: 50
-    - triv: 100
+    - hard: 5
+    - easy: 12
+    - triv: 20
 
 train_policy_on_hindsight_examples: true
 freeze_conjecturer: false
