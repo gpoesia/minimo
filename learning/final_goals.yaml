@@ -1,7 +1,8 @@
 final goals:
-  - "[('a0 : nat) -> ('a1 : nat) -> (= (+ (s 'a0) 'a1) (s (+ 'a0'a1)))]"
-  - "[('a0 : nat) -> (= (s 'a0) (+ 'a0 (s z)))]"
-  - "[('a0 : nat) -> (= (* z 'a0) z)]"
-  - "[('a0 : nat) -> (= (* 'a0 (s z)) 'a0)]"
+  # - "Conj(hard): [('a0 : nat) -> ('a1 : nat) -> (= (+ (s 'a0) 'a1) (s (+ 'a0'a1)))]"
+  - "Conj(hard): [('a0 : nat) -> (= (s 'a0) (+ 'a0 (s z)))]"
+  - "Conj(hard): [('a0 : nat) -> (= (+ z 'a0) 'a0)]"
+  # - "Conj(hard): [('a0 : nat) -> (= (* z 'a0) z)]"
+  # - "Conj(hard): [('a0 : nat) -> (= (* 'a0 (s z)) 'a0)]"
 
 

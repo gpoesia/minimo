@@ -13,7 +13,7 @@ policy:
     lr: 1e-4
     value_prior_weight: 10
     max_pos_neg_ratio: 5
-    train_iterations: 2000
+    train_iterations: 500
     batch_size: 10000
 
 defaults:
