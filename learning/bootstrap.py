@@ -47,6 +47,18 @@ def get_task_result(task):
     else:
         return task
 
+def get_alpha(i: int, cfg: DictConfig, conjectures_proved_ratio: float = None) -> float:
+    max_iterations = cfg.iterations-1
+    if cfg.get('alpha_schedule', None) is None or cfg.alpha_schedule == 'constant':
+        return cfg.get('alpha', 0.)
+    elif cfg.alpha_schedule == 'linear':
+        return cfg.alpha * (i / max_iterations)
+    elif cfg.alpha_schedule == 'quadratic':
+        return cfg.alpha * ((i / max_iterations) ** 2)
+    elif cfg.alpha_schedule == 'cubic':
+        return cfg.alpha * ((i / max_iterations) ** 3)
+    elif cfg.alpha_schedule == 'proved_ratio' and conjectures_proved_ratio is not None:
+        return cfg.alpha * conjectures_proved_ratio
 
 async def teacher_loop(cfg: DictConfig):
     print('Running in', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
@@ -198,6 +210,10 @@ async def teacher_loop(cfg: DictConfig):
             thresholds = [np.percentile(success_logprobs, p)
                           for _, p in difficulty_buckets]
 
+            ratio_proven = len(success_logprobs)/len(conjectures)
+            print(len(success_logprobs), 'out of', len(conjectures), 'conjectures were proven.', 'ratio =', ratio_proven)
+            wandb.log({'proved_ratio': ratio_proven, 'iteration': i})
+
             print('Thresholds:',
                   list(zip([k for k, _ in difficulty_buckets], thresholds)),
                   'min =', np.min(success_logprobs),
@@ -241,7 +257,7 @@ async def teacher_loop(cfg: DictConfig):
 
             # 3c- Train model on conjecturing and proof search examples.
             # TODO mihir, find alpha parameter
-            alpha = cfg.get('alpha', 0.)
+            alpha = get_alpha(i, cfg, ratio_proven)
             if i + 1 < cfg.iterations:
                 print(len(examples), 'accumulated training examples.')
                 agent.train(examples, final_goals, alpha)

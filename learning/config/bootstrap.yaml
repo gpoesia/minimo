@@ -9,6 +9,7 @@ iterations: 10
 n_conjectures: 20
 
 alpha: 1.0
+alpha_schedule: constant
 
 difficulty_buckets:
     - hard: 20
