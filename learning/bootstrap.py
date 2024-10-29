@@ -8,6 +8,7 @@ import io
 import json
 import datetime
 import yaml
+import random
 
 import hydra
 from omegaconf import DictConfig
@@ -48,18 +49,7 @@ def get_task_result(task):
     else:
         return task
 
-def get_alpha(i: int, cfg: DictConfig, conjectures_proved_ratio: float = None) -> float:
-    max_iterations = cfg.iterations-1
-    if cfg.get('alpha_schedule', None) is None or cfg.alpha_schedule == 'constant':
-        return cfg.get('alpha', 0.)
-    elif cfg.alpha_schedule == 'linear':
-        return cfg.alpha * (i / max_iterations)
-    elif cfg.alpha_schedule == 'quadratic':
-        return cfg.alpha * ((i / max_iterations) ** 2)
-    elif cfg.alpha_schedule == 'cubic':
-        return cfg.alpha * ((i / max_iterations) ** 3)
-    elif cfg.alpha_schedule == 'ratio' and conjectures_proved_ratio is not None:
-        return cfg.alpha * conjectures_proved_ratio
+
 
 async def teacher_loop(cfg: DictConfig):
     print('Running in', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
@@ -231,11 +221,9 @@ async def teacher_loop(cfg: DictConfig):
             log.write('\n')
 
             # 3c- Train model on conjecturing and proof search examples.
-            # TODO mihir, find alpha parameter
-            alpha = get_alpha(i, cfg, ratio_proven)
             if i + 1 < cfg.iterations:
                 print(len(examples), 'accumulated training examples.')
-                agent.train(examples, final_goals, alpha)
+                agent.train(examples=examples, final_goals=final_goals, iteration=i, ratio_proven=ratio_proven)
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
@@ -297,6 +285,17 @@ def get_log_probs(agent_dump, conjectures, theory, premises, outcomes, i):
 @hydra.main(version_base="1.2", config_path="config", config_name="bootstrap")
 def main(cfg: DictConfig):
     print('Running from:', os.getcwd())
+    
+    # TODO mihir, set seed for reproducibility
+    # FIXME I just copied this from MeshFeat. Check if this is correct.
+    seed = cfg.seed
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.cuda.manual_seed(seed)
+
     setup_wandb(cfg)
     if cfg.task == 'teacher':
         asyncio.run(teacher_loop(cfg))

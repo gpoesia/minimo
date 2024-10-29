@@ -1,5 +1,7 @@
 task: teacher
 
+seed: 0
+
 defaults:
     - _self_
     - agent: mcts-lm
@@ -8,7 +10,7 @@ defaults:
 iterations: 10
 n_conjectures: 50
 
-alpha: 1.0
+alpha: 0.0
 alpha_schedule: constant # [constant, linear, quadratic, cubic, ratio]
 
 difficulty_buckets:

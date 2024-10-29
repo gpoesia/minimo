@@ -13,7 +13,7 @@ import numpy as np
 from util import (
     log, softmax, pop_max, batch_strings, encode_batch, decode_batch,
     sample_batch, PAD, EOS, BOS, POSITIVE, NEGATIVE, EMPTY,
-    batch_inference
+    batch_inference, get_alpha
 )
 
 
@@ -63,7 +63,7 @@ class TransformerLMPolicy(nn.Module):
         attn_mask = input_ids != PAD
         return self._lm.forward(input_ids, attention_mask=attn_mask, labels=labels).loss
 
-    def fit(self, examples, final_goals, alpha, batch_size, n_steps, verbose=False):
+    def fit(self, examples, final_goals, cfg, batch_size, n_steps, iteration, ratio_proven, verbose=False):
         self._lm.train()
 
         rng = range(n_steps)
@@ -76,10 +76,12 @@ class TransformerLMPolicy(nn.Module):
             if len(b) == 0:
                 continue
             self._optimizer.zero_grad()
+            # TODO mihir, find alpha parameter
+            alpha = get_alpha(iteration, i, n_steps, cfg, ratio_proven)
             # TODO mihir, add our loss term to this 
             train_loss = self.get_loss(b) 
             # TODO mihir, measure progress towards goal here.
-            progress_loss = self.get_loss(final_goals) # slightly unintuitive naming, because the lower this is, the closer we are to the goal 
+            progress_loss = self.get_loss(final_goals) 
             loss = (1. - alpha) * train_loss + alpha * progress_loss 
             loss.backward()
             wandb.log({'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'alpha': alpha})

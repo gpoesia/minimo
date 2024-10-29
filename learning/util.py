@@ -41,6 +41,21 @@ def format_parameter_count(model):
 
     return f'{n / 10**6:.1f}B'
 
+def get_alpha(iteration, step, steps_per_iter, cfg, conjectures_proved_ratio):
+
+    total_steps = cfg.iterations * steps_per_iter - 1
+    i = iteration * steps_per_iter + step
+
+    if cfg.get('alpha_schedule', None) is None or cfg.alpha_schedule == 'constant':
+        return cfg.get('alpha', 0.)
+    elif cfg.alpha_schedule == 'linear':
+        return cfg.alpha * (i / total_steps)
+    elif cfg.alpha_schedule == 'quadratic':
+        return cfg.alpha * ((i / total_steps) ** 2)
+    elif cfg.alpha_schedule == 'cubic':
+        return cfg.alpha * ((i / total_steps) ** 3)
+    elif cfg.alpha_schedule == 'ratio' and conjectures_proved_ratio is not None:
+        return cfg.alpha * conjectures_proved_ratio
 
 def encode_batch(b: list[str], device: torch.device, bos=True, eos=True) -> torch.LongTensor:
     if not b:

@@ -91,3 +91,10 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
         print(tb)
         return StudentResult(tb, False, statement, None, None, [],
                              None, None, None)
+    except RuntimeError as e:
+        tb = traceback.format_exc(e)
+        print('RuntimeError in try_prove!')
+        print(tb)
+        return StudentResult(tb, False, statement, None, None, [],
+                             None, None, None)
+

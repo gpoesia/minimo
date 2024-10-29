@@ -796,8 +796,8 @@ class LMPolicy(Policy):
         return examples
 
 
-    def train(self, examples, final_goals=None, alpha=0., verbose=True):
-        self._lm.fit(examples, final_goals, alpha, self._batch_size, self._train_batches, verbose)
+    def train(self, examples, final_goals, cfg, iteration, ratio_proven, verbose=True):
+        self._lm.fit(examples, final_goals, cfg, self._batch_size, self._train_batches, iteration, ratio_proven, verbose)
         self._lm.eval()
 
 
@@ -967,15 +967,16 @@ class ProofSearchResult:
 
 class ProofSearchAgent:
     def __init__(self, config: DictConfig):
+        agent_config = config.agent
         self.config = config
-        self._max_mcts_nodes = config.get('max_mcts_nodes', 1000)
-        self._max_searches = config.get('max_searches', 1)
-        self._max_examples = config.get('max_examples', 10**8)
-        self._checkpoint_every = config.get('checkpoint_every', 1000)
-        self._policy = make_policy(config.policy)
+        self._max_mcts_nodes = agent_config.get('max_mcts_nodes', 1000)
+        self._max_searches = agent_config.get('max_searches', 1)
+        self._max_examples = agent_config.get('max_examples', 10**8)
+        self._checkpoint_every = agent_config.get('checkpoint_every', 1000)
+        self._policy = make_policy(agent_config.policy)
         self._node_type = ({'vanilla': LeftmostFirstSearchNode,
-                            'holophrasm': HolophrasmNode})[config.get('node_type', 'holophrasm')]
-        self._checkpoint_dir = config.get('checkpoint_dir', 'checkpoints')
+                            'holophrasm': HolophrasmNode})[agent_config.get('node_type', 'holophrasm')]
+        self._checkpoint_dir = agent_config.get('checkpoint_dir', 'checkpoints')
         self._training_its = 0
         self._checkpoints = 0
         self._examples = []
@@ -1020,7 +1021,7 @@ class ProofSearchAgent:
 
         return ProofSearchResult(problem, solved, root, examples, iterations)
 
-    def train(self, examples=None, final_goals=None, alpha=0.):
+    def train(self, examples, final_goals, iteration, ratio_proven): 
         examples = examples or self._examples
 
         if self._training_its % self._checkpoint_every == 0:
@@ -1037,7 +1038,7 @@ class ProofSearchAgent:
                 else:
                     assert isinstance(e, str), f'{type(e)} is not a string.'
                     example_strs.append(e)
-            self._policy.train(example_strs, final_goals, alpha)
+            self._policy.train(example_strs, final_goals, self.config, iteration, ratio_proven)
 
         self._training_its += 1
 
@@ -1297,7 +1298,7 @@ def make_agent(config):
         import pretraining
         agent = pretraining.CuriosityGuidedProofSearchAgent(config.agent)
     else:
-        agent = ProofSearchAgent(config.agent)
+        agent = ProofSearchAgent(config)
 
     if config.agent.get('lm_path'):
         path = config.agent.get('lm_path')
