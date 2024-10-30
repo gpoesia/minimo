@@ -1,7 +1,8 @@
-# Learning Formal Mathematics From Intrinsic Motivation
+# Goal-Conditionally Learning Formal Mathematics From Intrinsic Motivation
 
-This is the implementation of the following paper:
+This repository implements a first approach to goal-conditioned self-improvement. We extend the [minimo repository](https://github.com/gpoesia/minimo) with goal-conditioning and show that our approach to goal-conditioning leads to meaningfully faster convergence to solutions to human-input problems. We will soon publish an accompanying blog post on [our blog](https://pdoom.org/blog.html).
 
+The upstream `minimo` repository is based on the following paper:
 ```bibtex
 @article{poesia2024learning,
   title={Learning Formal Mathematics From Intrinsic Motivation},
@@ -11,7 +12,9 @@ This is the implementation of the following paper:
 }
 ```
 
-You can find it on [arXiv](https://arxiv.org/abs/2407.00695). This repository builds on the [original Peano code base](https://github.com/gpoesia/peano), though it stands alone.
+The rest of the `README` is from the upstream repository.
+
+---
 
 ### Compiling the environment
 
@@ -83,10 +86,24 @@ The entry point for the conjecture-prove loop is in [learning/bootstrap.py](boot
 [learning] $ python bootstrap.py theory=groups
 ```
 
-We use hydra for configuration -- the relevant file here is [config/bootstrap.yaml](config/bootstrap.yaml). This will run the loop in "sequential" mode, in a single process. There is a distributed mode, backed by a [https://docs.celeryq.dev/en/stable/](Celery queue), that you can use to leverage multiple CPUs/GPUs, either in the same or different machines (it doesn't matter, as long as they can connect to the queue). The setup is a bit manual: you must first spin up a Redis server, then run Celery worker processes backed by the Redis server, and finally run bootstrap.py with a DISTRIBUTED=1 environment variable:
+We use hydra for configuration -- the relevant file here is [config/bootstrap.yaml](config/bootstrap.yaml). This will run the loop in "sequential" mode, in a single process. There is a distributed mode, backed by a [https://docs.celeryq.dev/en/stable/](Celery queue), that you can use to leverage multiple CPUs/GPUs, either in the same or different machines (it doesn't matter, as long as they can connect to the queue).
 
-```sh
-[learning] $ DISTRIBUTED=1 python bootstrap.py theory=groups
+The setup is a bit manual:
+1. Install Redis. If you cannot install Redis via package managers, you can compile it locally via:
+```
+sh install_redis.sh
+```
+1. Start the redis server
+```
+sh launch/start_redis.sh
+```
+2. Run the Celery worker process
+```
+sh launch/start_worker.sh
+```
+3. Run bootstrap.py in distributed mode
+```
+sh launch/run_bootstrap_distributed.sh
 ```
 
 Feel free to open an issue if you're interested in setting this up, and I can expand on the documentation. The details might get a little bit cluster-specific, though the general setup is just that you need (a) a Redis server, (b) a number of worker processes that connect to it, and (c) a teacher process that runs the bootstrapping loop, also connecting to the same Redis server.

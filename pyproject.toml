@@ -1,0 +1,7 @@
+[project]
+name = "gc-minimo"
+version = "0.1.0"
+description = "Goal-Conditionally Learning Formal Mathematics from Intrinsic Motivation"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []

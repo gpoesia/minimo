@@ -2,6 +2,8 @@ bump-release.sh
 release-list.txt
 environment/target
 */_*
-learning/outputs
-outputs/
 slurm*
+learning/__pycache__
+learning/outputs/
+uv.lock
+outputs/
