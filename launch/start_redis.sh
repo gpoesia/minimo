@@ -28,6 +28,4 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 # Start Redis container in the foreground
-# FIXME(f.srambical): `--save ""` is a quickfix and leads to redis not trying to persist data
-# We should instead fix data persistence in the redis container
 apptainer run --env REDIS_PORT=$REDIS_PORT redis.sif redis-server --port $REDIS_PORT --protected-mode no --bind 0.0.0.0 $LOGLEVEL
