@@ -54,8 +54,20 @@ def get_alpha(iteration, step, steps_per_iter, cfg, conjectures_proved_ratio):
         return cfg.alpha * ((i / total_steps) ** 2)
     elif cfg.alpha_schedule == 'cubic':
         return cfg.alpha * ((i / total_steps) ** 3)
+    elif cfg.alpha_schedule == 'cos':
+        return cfg.alpha * (1 + math.cos(math.pi * (i / total_steps-1))) / 2
     elif cfg.alpha_schedule == 'ratio' and conjectures_proved_ratio is not None:
         return cfg.alpha * conjectures_proved_ratio
+
+def load_final_goals(path):
+    goals_dict = json.load(open(path))
+    final_goals = []
+    solutions = []
+    for goal in goals_dict["goals"]:
+        final_goals.append(goal["theorem"])
+        solutions.append(goal["solution"])
+
+    return final_goals, solutions
 
 def encode_batch(b: list[str], device: torch.device, bos=True, eos=True) -> torch.LongTensor:
     if not b:

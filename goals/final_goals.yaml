@@ -1,0 +1,6 @@
+final_goals:
+  - "Conj(hard): [('a0 : nat) -> ('a1 : nat) -> (= (+ (s 'a0) 'a1) (s (+ 'a0 'a1)))]" 
+
+
+
+

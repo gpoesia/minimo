@@ -63,6 +63,11 @@ class TransformerLMPolicy(nn.Module):
         attn_mask = input_ids != PAD
         return self._lm.forward(input_ids, attention_mask=attn_mask, labels=labels).loss
 
+    def val_loss(self, val_set):
+        self._lm.eval()
+        loss = self.get_loss(val_set).item()
+        return loss
+
     def fit(self, examples, final_goals, cfg, batch_size, n_steps, iteration, ratio_proven, verbose=False):
         self._lm.train()
 

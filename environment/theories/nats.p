@@ -132,3 +132,5 @@ theorem or_comm : [('p : prop) -> ('q : prop) -> (or 'p 'q) -> (or 'q 'p)] {
         show (or q p) by or_l.
     }
 }
+
+

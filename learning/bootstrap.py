@@ -21,7 +21,7 @@ import peano
 import worker
 from worker import StudentResult  # noqa
 from hindsight import HindsightExample  # noqa
-from util import format_blocks_with_indent, sample_batch, setup_wandb, value_color, save_json
+from util import format_blocks_with_indent, sample_batch, setup_wandb, value_color, save_json, get_alpha, load_final_goals
 from conjecture import AgentLM, Context, sample_conjecture
 from proofsearch import make_agent
 
@@ -55,10 +55,9 @@ async def teacher_loop(cfg: DictConfig):
     print('Running in', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
     agent = make_agent(cfg)
 
-    # TODO mihir, load goals from yaml file.
-    with open(os.path.join(os.path.dirname(__file__), 'final_goals.yaml'), 'r') as f:
-        final_goals = yaml.safe_load(f)["final goals"]
-    final_goals_formatted = [g.split("Conj(hard): ")[1] for g in final_goals]
+    # TODO mihir, load goals from file.
+    final_goals_formatted, final_solutions = load_final_goals(os.path.join(os.path.dirname(__file__), '../goals', cfg.theory.name + '.json'))
+    final_goals = ["Conj(hard): " + g for g in final_goals_formatted]
 
     with open(os.path.join(os.path.dirname(__file__), 'theories', cfg.theory.name + '.p')) as f:
         theory = f.read()
@@ -223,7 +222,7 @@ async def teacher_loop(cfg: DictConfig):
             # 3c- Train model on conjecturing and proof search examples.
             if i + 1 < cfg.iterations:
                 print(len(examples), 'accumulated training examples.')
-                agent.train(examples=examples, final_goals=final_goals, iteration=i, ratio_proven=ratio_proven)
+                agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, iteration=i, ratio_proven=ratio_proven)
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')

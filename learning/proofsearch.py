@@ -795,6 +795,8 @@ class LMPolicy(Policy):
 
         return examples
 
+    def val_loss(self, val_set):
+        return self._lm.val_loss(val_set)
 
     def train(self, examples, final_goals, cfg, iteration, ratio_proven, verbose=True):
         self._lm.fit(examples, final_goals, cfg, self._batch_size, self._train_batches, iteration, ratio_proven, verbose)
@@ -1021,7 +1023,7 @@ class ProofSearchAgent:
 
         return ProofSearchResult(problem, solved, root, examples, iterations)
 
-    def train(self, examples, final_goals, iteration, ratio_proven): 
+    def train(self, examples, final_goals, solutions, iteration, ratio_proven): 
         examples = examples or self._examples
 
         if self._training_its % self._checkpoint_every == 0:
@@ -1038,6 +1040,12 @@ class ProofSearchAgent:
                 else:
                     assert isinstance(e, str), f'{type(e)} is not a string.'
                     example_strs.append(e)
+            # calculate validation loss
+            # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists
+            solutions_flattened = [x for xs in solutions for x in xs]
+            val_loss = self._policy.val_loss(solutions_flattened)
+            wandb.log({'val_loss': val_loss})
+            # train policy
             self._policy.train(example_strs, final_goals, self.config, iteration, ratio_proven)
 
         self._training_its += 1

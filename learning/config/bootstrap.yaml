@@ -11,7 +11,7 @@ iterations: 10
 n_conjectures: 50
 
 alpha: 0.0
-alpha_schedule: constant # [constant, linear, quadratic, cubic, ratio]
+alpha_schedule: constant # [constant, linear, quadratic, cubic, cos, ratio]
 
 difficulty_buckets:
     - hard: 5
