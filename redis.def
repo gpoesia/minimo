@@ -1,2 +1,0 @@
-Bootstrap: docker
-From: redis:7.2
