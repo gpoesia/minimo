@@ -28,4 +28,4 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 # Start Redis server
-redis-server --port $REDIS_PORT --protected-mode no --bind 0.0.0.0 --save "" $LOGLEVEL
+redis-server --port $REDIS_PORT --protected-mode no --bind 0.0.0.0 $LOGLEVEL
