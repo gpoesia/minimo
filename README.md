@@ -89,15 +89,15 @@ The entry point for the conjecture-prove loop is in [learning/bootstrap.py](boot
 We use hydra for configuration -- the relevant file here is [config/bootstrap.yaml](config/bootstrap.yaml). This will run the loop in "sequential" mode, in a single process. There is a distributed mode, backed by a [https://docs.celeryq.dev/en/stable/](Celery queue), that you can use to leverage multiple CPUs/GPUs, either in the same or different machines (it doesn't matter, as long as they can connect to the queue).
 
 The setup is a bit manual:
-1. Build the redis container
+1. Install Redis. If you cannot install Redis via package managers, you can compile it locally via:
 ```
-apptainer build redis.sif redis.def
+sh install_redis.sh
 ```
-1. Start the redis container
+1. Start the redis server
 ```
 sh launch/start_redis.sh
 ```
-2. Run Celery worker process
+2. Run the Celery worker process
 ```
 sh launch/start_worker.sh
 ```
