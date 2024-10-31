@@ -659,9 +659,6 @@ class LMPolicy(Policy):
         self._lm = policy.TransformerLMPolicy(config)
         self._value_prior_weight = config.get('value_prior_weight', 1)
         self._max_positive_negative_ratio = config.get('max_positive_negative_ratio', 10)
-        self._optimizer = torch.optim.AdamW(self._lm.parameters(), lr=config.get('lr', 1e-4))
-        self._train_batches = config.get('train_iterations', 1000)
-        self._batch_size = config.get('batch_size', 1000)
         self._lm.eval()
 
     def evaluate(self, node: TreeSearchNode) -> np.array:
@@ -798,8 +795,8 @@ class LMPolicy(Policy):
     def val_loss(self, val_set):
         return self._lm.val_loss(val_set)
 
-    def train(self, examples, final_goals, cfg, iteration, ratio_proven, verbose=True):
-        self._lm.fit(examples, final_goals, cfg, self._batch_size, self._train_batches, iteration, ratio_proven, verbose)
+    def train(self, examples, final_goals, iteration, ratio_proven, verbose=True):
+        self._lm.fit(examples, final_goals, iteration, ratio_proven, verbose)
         self._lm.eval()
 
 
@@ -1042,7 +1039,7 @@ class ProofSearchAgent:
                     example_strs.append(e)
 
             # train policy
-            self._policy.train(example_strs, final_goals, self.config, iteration, ratio_proven)
+            self._policy.train(example_strs, final_goals, iteration, ratio_proven)
 
             # calculate validation loss
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists

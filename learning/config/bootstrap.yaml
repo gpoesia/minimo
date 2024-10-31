@@ -1,11 +1,12 @@
 task: teacher
 
+seed: 0
+
 defaults:
     - _self_
     - agent: mcts-lm
     - theory: propositional-logic
 
-iterations: 5
 n_conjectures: 200
 
 difficulty_buckets:
