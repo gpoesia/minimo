@@ -137,6 +137,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             conjectured_final_goals = []
             while len(conjectures) < cfg.n_conjectures:
                 proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
+                proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
 
                 if proposal and proposal not in conjectures + proven_conjectures:
                     conjectures.append(proposal)
