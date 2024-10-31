@@ -12,6 +12,7 @@ n_conjectures: 50
 
 alpha: 0.0
 alpha_schedule: constant # [constant, linear, quadratic, cubic, cos, ratio]
+normalize_loss: true
 
 difficulty_buckets:
     - hard: 5

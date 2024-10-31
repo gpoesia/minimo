@@ -3,7 +3,7 @@
 type: mcts
 
 node_type: holophrasm
-max_mcts_nodes: 100
+max_mcts_nodes: 500
 expansions: 1000
 max_searches: 1
 max_examples: 1000
@@ -13,7 +13,7 @@ policy:
     lr: 1e-4
     value_prior_weight: 10
     max_pos_neg_ratio: 5
-    train_iterations: 500
+    train_iterations: 2000
     batch_size: 10000
 
 defaults:
