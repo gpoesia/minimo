@@ -112,7 +112,7 @@ async def teacher_loop(cfg: DictConfig):
             conjectures = []
 
             while len(conjectures) < cfg.n_conjectures:
-                proposal = sample_conjecture(AgentLM(agent, 'Conj:(HARD) '), context)
+                proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
 
                 if proposal and proposal not in conjectures + proven_conjectures:
                     conjectures.append(proposal)
