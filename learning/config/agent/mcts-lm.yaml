@@ -3,7 +3,7 @@
 type: mcts
 
 node_type: holophrasm
-max_mcts_nodes: 500
+max_mcts_nodes: 100
 expansions: 1000
 max_searches: 1
 max_examples: 1000

@@ -6,62 +6,17 @@
             "solution": [
                 "theorem t : [('a0 : nat) -> (= (+ z 'a0) 'a0)] {",
                 "apply nat_ind.",
-
                 "goal (= (+ z z) z) {",
-                    "show (= (+ z z) z) by +_z.",
+                "show (= (+ z z) z) by +_z.",
                 "}",
-  
                 "goal [('n : nat) -> (= (+ z 'n) 'n) -> (= (+ z (s 'n)) (s 'n))] {",
-                    "intro x : nat.",
-                    "intro x0: (= (+ z x) x).",
-                    "show (= (+ z (s x)) (s (+ z x))) by +_s.",
-                    "show (= (+ z (s x)) (s x)) by rewrite.",
-                "}",
-                "}"
-            ]
-        },
-        {
-            "name": "a_add_assoc",
-            "theorem": "[('a0 : nat) -> ('a1 : nat) -> ('a2 : nat) -> (= (+ (+ 'a0 'a1) 'a2) (+ 'a0 (+ 'a1 'a2)))]",
-            "solution": [
-
-            ]
-        },
-        {
-            "name": "a_succ_add",
-            "theorem": "[('a0 : nat) -> ('a1 : nat) -> (= (+ (s 'a0) 'a1) (s (+ 'a0 'a1)))]",
-            "solution": [
-                "theorem t : [('a0 : nat) -> ('a1 : nat) -> (= (+ (s 'a0) 'a1) (s (+ 'a0 'a1)))] {",
                 "intro x : nat.",
-                "apply nat_ind.",
-                "goal (= (+ (s x) z) (s (+ x z))) {",
-                "show (= (+ (s x) z) (s x)) by +_z.",
-                "show (= (+ x z) x) by +_z.",
-                "show (= x (+ x z)) by eq_symm.",
-                "show (= (+ (s x) z) (s (+ x z))) by rewrite.",
-                "}",
-                "goal [('n : nat) -> (= (+ (s x) 'n) (s (+ x 'n))) ->",
-                "(= (+ (s x) (s 'n)) (s (+ x (s 'n))))] {",
-                "intro x0 : nat.",
-                "intro x1 : (= (+ (s x) x0) (s (+ x x0))).",
-                "show (= (s (+ x x0)) (+ (s x) x0)) by eq_symm.",
-                "show (= (+ (s x) x0) (+ (s x) x0)) by rewrite.",
-                "show (= (s (+ x x0)) (s (+ x x0))) by rewrite.",
-                "show (= (+ x (s x0)) (s (+ x x0))) by +_s.",
-                "show (= (+ x (s x0)) (+ (s x) x0)) by rewrite.",
-                "show (= (s (+ x x0)) (+ x (s x0))) by eq_symm.",
-                "show (= (+ (s x) x0) (+ x (s x0))) by rewrite.",
-                "show (= (+ x (s x0)) (+ x (s x0))) by rewrite.",
-                "show (= (+ (s x) (s x0)) (s (+ (s x) x0))) by +_s.",
-                "show (= (+ (s x) (s x0)) (s (+ x (s x0)))) by rewrite.",
+                "intro x0: (= (+ z x) x).",
+                "show (= (+ z (s x)) (s (+ z x))) by +_s.",
+                "show (= (+ z (s x)) (s x)) by rewrite.",
                 "}",
                 "}"
             ]
-        },
-        {
-            "name": "a_succ_eq_add_one",
-            "theorem": "[('a0 : nat) -> ('a1 : nat) -> (= (+ (s 'a0) 'a1) (s (+ 'a0 'a1)))]",
-            "solution": []
         }
     ]
 }

@@ -1040,13 +1040,15 @@ class ProofSearchAgent:
                 else:
                     assert isinstance(e, str), f'{type(e)} is not a string.'
                     example_strs.append(e)
+
+            # train policy
+            self._policy.train(example_strs, final_goals, self.config, iteration, ratio_proven)
+
             # calculate validation loss
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists
             solutions_flattened = [x for xs in solutions for x in xs]
             val_loss = self._policy.val_loss(solutions_flattened)
             wandb.log({'val_loss': val_loss})
-            # train policy
-            self._policy.train(example_strs, final_goals, self.config, iteration, ratio_proven)
 
         self._training_its += 1
 

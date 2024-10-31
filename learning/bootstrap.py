@@ -57,7 +57,7 @@ async def teacher_loop(cfg: DictConfig):
 
     # TODO mihir, load goals from file.
     final_goals_formatted, final_solutions = load_final_goals(os.path.join(os.path.dirname(__file__), '../goals', cfg.theory.name + '.json'))
-    final_goals = ["Conj(hard): " + g for g in final_goals_formatted]
+    final_goals = ["Conj:(hard) " + g for g in final_goals_formatted]
 
     with open(os.path.join(os.path.dirname(__file__), 'theories', cfg.theory.name + '.p')) as f:
         theory = f.read()
