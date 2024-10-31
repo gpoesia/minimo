@@ -88,9 +88,9 @@ class TransformerLMPolicy(nn.Module):
             # TODO mihir, measure progress towards goal here.
             progress_loss = self.get_loss(final_goals) 
             if not cfg.get('normalize_loss', False):
-                loss = (1. - alpha) * train_loss + alpha * progress_loss 
-            else:
                 loss = train_loss + alpha * progress_loss 
+            else:
+                loss = (1. - alpha) * train_loss + alpha * progress_loss 
             loss.backward()
             wandb.log({'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'alpha': alpha})
             self._optimizer.step()
