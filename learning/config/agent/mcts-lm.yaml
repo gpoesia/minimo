@@ -12,7 +12,8 @@ policy:
     type: LM
     lr: 1e-4
     alpha: 0.0
-    normalize_loss: true
+    alpha_schedule: constant
+    normalize_loss: false
     value_prior_weight: 10
     max_pos_neg_ratio: 5
     train_iterations: 2000

@@ -6,5 +6,5 @@ export DISTRIBUTED=1
 # Run the bootstrap script
 # TODO(f.srambical): Make theory a command line argument
 cd learning/
-# python bootstrap.py theory=nat-add alpha=1 alpha_schedule=ratio
-$1
+
+python bootstrap.py theory=nat-add $@

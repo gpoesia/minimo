@@ -8,6 +8,7 @@ defaults:
     - theory: propositional-logic
 
 n_conjectures: 200
+goals: nat-add
 
 difficulty_buckets:
     - hard: 20
