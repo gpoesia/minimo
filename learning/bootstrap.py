@@ -117,7 +117,7 @@ async def teacher_loop(cfg: DictConfig):
             agent_dump = buff.getvalue()
 
             # Check if and how many conjectures out of the final goal set could be proven by current policy
-            student_results_final, examples_final = prove_conjectures(agent_dump, final_goals_formatted, theory, premises)
+            student_results_final = prove_conjectures(agent_dump, final_goals_formatted, theory, premises)
             success_logprobs_final, outcomes_final = get_log_probs(student_results_final, outcomes, i)
             print('Final goals proven:', len(success_logprobs_final), 'out of', len(final_goals))
             wandb.log({'final_goals_proven': len(success_logprobs_final), 'iteration': i})
