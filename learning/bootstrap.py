@@ -159,7 +159,8 @@ async def teacher_loop(cfg: DictConfig):
             log.flush()
 
             # 2- Try to prove each of the conjectures
-            student_results, examples = prove_conjectures(agent_dump, conjectures, theory, premises)
+            examples = []
+            student_results= prove_conjectures(agent_dump, conjectures, theory, premises)
 
             # 3- Train model on proofs and outcome of conjectures (easy, hard, timeout)
             # 3a- Look at all the success logprobs and compute the easy/hard threhsold.
@@ -171,7 +172,6 @@ async def teacher_loop(cfg: DictConfig):
 
             # Add output of proving final goals to the list of proven conjectures
             student_results.extend(student_results_final)
-            examples.extend(examples_final)
             outcomes.extend(outcomes_final)
 
             thresholds = [np.percentile(success_logprobs, p)
@@ -241,7 +241,6 @@ def prove_conjectures(agent_dump, conjectures, theory, premises):
             worker.BackgroundTheory(theory, premises),
             conjecture))
 
-    examples = []
     student_results = []
 
     print('Collecting', len(tasks), 'results from workers.')
@@ -255,7 +254,7 @@ def prove_conjectures(agent_dump, conjectures, theory, premises):
             continue
 
         student_results.append(student_result)
-    return student_results, examples
+    return student_results
 
 
 def get_log_probs(student_results, outcomes, i):
