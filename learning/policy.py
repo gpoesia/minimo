@@ -206,7 +206,7 @@ class TransformerLMPolicy(nn.Module):
                 dist = np.exp(out.scores[j - p_len][i].cpu().numpy())
                 logprob = np.log(dist[ch] / dist.sum())
                 if np.isinf(logprob):
-                    breakpoint()
+                    raise NotImplementedError("Infinite logprob")
                 scores[i] += logprob
         return strs, scores # seqs, scores
 

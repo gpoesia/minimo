@@ -59,7 +59,7 @@ def extract_hindsight_examples(root,
                                                 states_on_path[0][0].goal())
         except:
             print('Oh no')
-            breakpoint()
+            raise NotImplementedError("Could not generalize theorem statement")
 
         new_root = proofsearch.HolophrasmNode([new_root_state])
         cleaned_path = traverse_path(new_root, path)
@@ -169,7 +169,7 @@ def get_policy(node, path) -> dict[str, str]:
 
     for action in path:
         if action not in node.actions:
-            breakpoint()
+            raise NotImplementedError("Action not in node actions")
         assert action in node.actions
         policy[str(node)] = str(action)
         node = node.expand(action)

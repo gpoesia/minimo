@@ -43,16 +43,16 @@ app.conf.accept_content = ['application/json', 'application/x-python-serialize']
 
 @app.task
 def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> StudentResult:
-    with io.BytesIO(agent_dump) as f:
-        agent = torch.load(f)
-
-    print('Proving', statement, 'on', agent._policy._lm._lm.device)
-
-    state = peano.PyProofState(theory.theory,
-                               theory.premises,
-                               statement)
-
     try:
+        with io.BytesIO(agent_dump) as f:
+            agent = torch.load(f)
+
+        print('Proving', statement, 'on', agent._policy._lm._lm.device)
+
+        state = peano.PyProofState(theory.theory,
+                                theory.premises,
+                                statement)
+
         agent_result = agent.proof_search(statement, state)
 
         if agent_result.success:

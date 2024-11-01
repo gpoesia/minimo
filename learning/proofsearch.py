@@ -449,7 +449,7 @@ class TreeSearchNode:
         if after - before > ACTION_ENUMERATION_TIMEOUT:
             # Kill exploding node.
             print(f'Killing node after {after - before:.1f}s')
-            breakpoint()
+            raise NotImplementedError("Node took too long to expand.")
             self._children = []
 
     def children(self) -> list['TreeSearchNode']:
@@ -487,7 +487,6 @@ class TreeSearchNode:
             return 0
 
         if self.is_terminal():
-            breakpoint()
             raise RuntimeError("Actions lead to terminal non-solved node.")
 
         self.expand()
@@ -514,7 +513,8 @@ class TreeSearchNode:
                           if str(a) == str(head))
 
             if idx >= len(pi):
-                breakpoint()
+                raise NotImplementedError("Could not generalize theorem statement")
+
 
             head_logprob = math.log(float(pi[idx]))
             tail_logprob = (TreeSearchNode(self.state_node.expand(a),
@@ -708,7 +708,8 @@ class LMPolicy(Policy):
 
         def dfs_solution(node):
             if not node.is_solved():
-                breakpoint()
+                raise NotImplementedError("Could not generalize theorem statement")
+
 
             assert node.is_solved()
             positives.add(str(node.state_node))
@@ -882,8 +883,6 @@ class MonteCarloTreeSearch(Policy):
         for i, c in enumerate(node.children()):
             if str(c._parent[1]) == action:
                 return i
-
-        breakpoint()
 
         raise ValueError(f"Exploration prefix had impossible action {action}")
 
