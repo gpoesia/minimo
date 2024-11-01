@@ -64,9 +64,6 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
         else:
             solution_actions, proof, logprob = None, None, None
 
-        examples = []
-        # Policy examples for the proved goal.
-        examples.extend(agent._policy.extract_examples(root=agent_result.root))
         # Hindsight examples (policy + conjecturing).
         hindsight_examples = hindsight.extract_hindsight_examples(
                 agent_result.root,

@@ -7,3 +7,4 @@ learning/__pycache__
 learning/outputs/
 uv.lock
 outputs/
+.venv/
