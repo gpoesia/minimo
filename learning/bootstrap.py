@@ -167,8 +167,8 @@ async def teacher_loop(cfg: DictConfig):
             success_logprobs, outcomes = get_log_probs(student_results, outcomes, i)
             
             if not success_logprobs:
-                print(f'No solutions found in iteration {i} - stopping learning loop...')
-                break
+                print(f'No solutions found in iteration {i} - continuing to next iteration...')
+                continue
 
             # Add output of proving final goals to the list of proven conjectures
             student_results.extend(student_results_final)
