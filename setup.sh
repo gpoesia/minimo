@@ -1,5 +1,5 @@
-# FIXME(f.srambical): Ensure that the python version is 3.11
-# python3 -m venv .venv
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Create a virtual environment with python 3.11 and install pip3
 uv sync
