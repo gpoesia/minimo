@@ -14,7 +14,7 @@ policy:
     mu: 0.0
     ratio_conditioning: False
     mu_warmup: True
-    mu_warmup_steps: 1000
+    mu_warmup_steps: 100
     skip_conj_prefix_loss: True
     # FIXME(f.srambical): these are arbitrary values; update these two values before pushing
     threshold: 0.5

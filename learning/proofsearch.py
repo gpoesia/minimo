@@ -796,8 +796,8 @@ class LMPolicy(Policy):
     def val_loss(self, val_set):
         return self._lm.val_loss(val_set)
 
-    def train(self, examples, final_goals, ratio_proven, verbose=True):
-        self._lm.fit(examples, final_goals, ratio_proven, verbose)
+    def train(self, examples, final_goals, iteration, ratio_proven, verbose=True):
+        self._lm.fit(examples, final_goals, iteration, ratio_proven, verbose)
         self._lm.eval()
 
 
@@ -1038,7 +1038,7 @@ class ProofSearchAgent:
                     example_strs.append(e)
 
             # train policy
-            self._policy.train(example_strs, final_goals, ratio_proven)
+            self._policy.train(example_strs, final_goals, self._training_its, ratio_proven)
 
             # calculate validation loss
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists

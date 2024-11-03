@@ -37,7 +37,7 @@ class TransformerLMPolicy(nn.Module):
         self.mu = config.get('mu', 0.)
         self.ratio_conditioning = config.get('ratio_conditioning', False)
         self.mu_warmup = config.get('mu_warmup', True)
-        self.mu_warmup_steps = config.get('mu_warmup_steps', 1000)
+        self.mu_warmup_steps = config.get('mu_warmup_steps', 100)
         self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
         self.total_iterations = config.total_iterations
 
@@ -92,7 +92,7 @@ class TransformerLMPolicy(nn.Module):
         loss = self.get_loss(val_set).item()
         return loss
 
-    def fit(self, examples, final_goals, ratio_proven, verbose=False):
+    def fit(self, examples, final_goals, iteration, ratio_proven, verbose=False):
         self._lm.train()
 
         rng = range(self._train_batches)
@@ -106,7 +106,7 @@ class TransformerLMPolicy(nn.Module):
                 continue
             self._optimizer.zero_grad()
             train_loss = self.get_loss(b) 
-            mu = self.get_mu(ratio_proven, i)
+            mu = self.get_mu(ratio_proven, (iteration*self._train_batches)+i)
             # if the ratio of proven conjectures is less than the threshold-margin
             if ratio_proven < self.threshold - self.margin:
                 progress_loss = 0
