@@ -31,11 +31,11 @@ class TransformerLMPolicy(nn.Module):
         super().__init__()
 
         self.config = config
-        self.alpha = config.get('alpha', 0.)
-        self.alpha_schedule = config.get('alpha_schedule', 'constant')
-        self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', True)
+        self.mu = config.get('mu', 0.)
+        self.ratio_conditioning = config.get('ratio_conditioning', False)
+        self.mu_warmup = config.get('mu_warmup', True)
+        self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
         self.total_iterations = config.total_iterations
-        self.normalize_loss = config.get('normalize_loss', False)
 
         if torch.cuda.is_available():
             cfg = transformers.GPT2Config(
@@ -88,7 +88,7 @@ class TransformerLMPolicy(nn.Module):
         loss = self.get_loss(val_set).item()
         return loss
 
-    def fit(self, examples, final_goals, iteration, ratio_proven, verbose=False):
+    def fit(self, examples, final_goals, ratio_proven, verbose=False):
         self._lm.train()
 
         rng = range(self._train_batches)
@@ -101,20 +101,24 @@ class TransformerLMPolicy(nn.Module):
             if len(b) == 0:
                 continue
             self._optimizer.zero_grad()
-            # find alpha parameter
-            alpha = self.get_alpha(iteration, i, ratio_proven)
-            # calculate standard transformer loss 
-            train_loss = self.get_loss(b) 
-            # measure progress towards goal
-            progress_loss = self.get_loss(final_goals) 
-
-            if self.normalize_loss:
-                loss = (1. - alpha) * train_loss + alpha * progress_loss 
+            # if the ratio of proven conjectures is less than the threshold-margin
+            if ratio_proven < self.threshold - self.margin:
+                # find mu parameter
+                mu = self.get_mu(ratio_proven, i)
+                # calculate standard transformer loss 
+                train_loss = self.get_loss(b) 
+                # measure progress towards goal
+                progress_loss = self.get_loss(final_goals) 
             else:
-                loss = train_loss + alpha * progress_loss 
+                progress_loss = 0
+
+            # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
+            #FIXME(f.srambical): check whether this is correct
+            num_diff_problems_pairs = sum('Conj:' in s for s in b)
+            loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
 
             loss.backward()
-            wandb.log({'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'alpha': alpha})
+            wandb.log({'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'mu': mu})
             self._optimizer.step()
 
         self._lm.eval()
@@ -139,23 +143,14 @@ class TransformerLMPolicy(nn.Module):
 
         return return_value
 
-    def get_alpha(self, iteration, step, conjectures_proved_ratio):
-
-        total_steps = self.total_iterations * self._train_batches - 1
-        i = iteration * self._train_batches + step
-
-        if self.alpha_schedule == 'constant':
-            return self.alpha
-        elif self.alpha_schedule == 'linear':
-            return self.alpha * (i / total_steps)
-        elif self.alpha_schedule == 'quadratic':
-            return self.alpha * ((i / total_steps) ** 2)
-        elif self.alpha_schedule == 'cubic':
-            return self.alpha * ((i / total_steps) ** 3)
-        elif self.alpha_schedule == 'cos':
-            return self.alpha * (1 + math.cos(math.pi * (i / total_steps-1))) / 2
-        elif self.alpha_schedule == 'ratio' and conjectures_proved_ratio is not None:
-            return self.alpha * conjectures_proved_ratio
+    def get_mu(self, conjectures_proved_ratio, step):
+        if self.ratio_conditioning:
+            raise NotImplementedError("Ratio-conditional mu not implemented")
+        else:
+            if self.mu_warmup and step < self._train_batches * 0.1:
+                return self.mu * (step/(self._train_batches*0.1))
+            else:
+                return self.mu
 
     def estimate_state_values(self, states: list[str]) -> np.array:
         return self._estimate_query_values([self.format_state_query(s) for s in states])

@@ -225,7 +225,7 @@ async def teacher_loop(cfg: DictConfig):
             # 3c- Train model on conjecturing and proof search examples.
             if i + 1 < cfg.agent.policy.total_iterations:
                 print(len(examples), 'accumulated training examples.')
-                agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, iteration=i, ratio_proven=ratio_proven)
+                agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven)
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
