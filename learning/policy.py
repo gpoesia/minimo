@@ -37,6 +37,7 @@ class TransformerLMPolicy(nn.Module):
         self.mu = config.get('mu', 0.)
         self.ratio_conditioning = config.get('ratio_conditioning', False)
         self.mu_warmup = config.get('mu_warmup', True)
+        self.mu_warmup_steps = config.get('mu_warmup_steps', 1000)
         self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
         self.total_iterations = config.total_iterations
 
@@ -147,8 +148,8 @@ class TransformerLMPolicy(nn.Module):
         if self.ratio_conditioning:
             raise NotImplementedError("Ratio-conditional mu not implemented")
         else:
-            if self.mu_warmup and step < self._train_batches * 0.1:
-                return self.mu * (step/(self._train_batches*0.1))
+            if self.mu_warmup and step < self.mu_warmup_steps:
+                return self.mu * (step/(self.mu_warmup_steps))
             else:
                 return self.mu
 
