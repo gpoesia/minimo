@@ -33,6 +33,7 @@ class TransformerLMPolicy(nn.Module):
         self.config = config
         self.alpha = config.get('alpha', 0.)
         self.alpha_schedule = config.get('alpha_schedule', 'constant')
+        self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', True)
         self.total_iterations = config.total_iterations
         self.normalize_loss = config.get('normalize_loss', False)
 
@@ -69,6 +70,16 @@ class TransformerLMPolicy(nn.Module):
         _, input_ids = self._strs_to_token_ids(strs, True)
         labels = input_ids.clone()
         labels[labels == PAD] = -100
+        if self.skip_conj_prefix_loss:
+            # Mask out loss computation for Conj:(outcome) prefix
+            for i, s in enumerate(strs):
+                if s.startswith('Conj:('):
+                    prefix_end = s.find(') ')
+                    if prefix_end != -1:
+                        # Convert prefix length to token length (add 1 for BOS token)
+                        prefix_len = len(s[:prefix_end + 2]) + 1
+                        # Set labels to -100 for all prefix tokens
+                        labels[i, :prefix_len] = -100
         attn_mask = input_ids != PAD
         return self._lm.forward(input_ids, attention_mask=attn_mask, labels=labels).loss
 
