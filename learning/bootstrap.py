@@ -290,15 +290,10 @@ def get_log_probs(student_results, outcomes, i):
 def main(cfg: DictConfig):
     print('Running from:', os.getcwd())
     
-    # TODO mihir, set seed for reproducibility
-    # FIXME I just copied this from MeshFeat. Check if this is correct.
     seed = cfg.seed
-    np.random.seed(seed)
-    random.seed(seed)
     torch.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    torch.cuda.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
 
     setup_wandb(cfg)
     if cfg.task == 'teacher':
