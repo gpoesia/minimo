@@ -31,6 +31,9 @@ class TransformerLMPolicy(nn.Module):
         super().__init__()
 
         self.config = config
+        # FIXME(f.srambical): adjust these default values
+        self.threshold = config.get('threshold', 0.5)
+        self.margin = config.get('margin', 0.1)
         self.mu = config.get('mu', 0.)
         self.ratio_conditioning = config.get('ratio_conditioning', False)
         self.mu_warmup = config.get('mu_warmup', True)
