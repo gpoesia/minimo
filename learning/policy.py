@@ -104,16 +104,13 @@ class TransformerLMPolicy(nn.Module):
             if len(b) == 0:
                 continue
             self._optimizer.zero_grad()
+            train_loss = self.get_loss(b) 
+            mu = self.get_mu(ratio_proven, i)
             # if the ratio of proven conjectures is less than the threshold-margin
             if ratio_proven < self.threshold - self.margin:
-                # find mu parameter
-                mu = self.get_mu(ratio_proven, i)
-                # calculate standard transformer loss 
-                train_loss = self.get_loss(b) 
-                # measure progress towards goal
-                progress_loss = self.get_loss(final_goals) 
-            else:
                 progress_loss = 0
+            else:
+                progress_loss = self.get_loss(final_goals) 
 
             # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
             #FIXME(f.srambical): check whether this is correct
