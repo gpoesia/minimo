@@ -1,0 +1,48 @@
+Bootstrap: docker
+From: nvcr.io/nvidia/pytorch:24.01-py3
+
+%files
+    . /app
+
+%environment
+    export VIRTUAL_ENV=/app/.venv
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+
+%post
+    # Enable command tracing
+    set -x
+
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        curl \
+        build-essential \
+        ca-certificates \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    . "$HOME/.cargo/env"
+
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    # Set up Python virtual environment and dependencies
+    cd /app
+    uv sync
+    . .venv/bin/activate
+    python3 -m ensurepip --upgrade
+
+    # Install Python dependencies
+    pip3 install maturin
+
+    # Build and install the environment
+    cd environment
+    maturin dev --release
+    cargo build --bin peano --release
+    cd ../learning
+    pip3 install -r requirements.txt
+
+%runscript
+    . /app/.venv/bin/activate
+    python3 "$@"
