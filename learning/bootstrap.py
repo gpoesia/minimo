@@ -166,6 +166,10 @@ async def teacher_loop(cfg: DictConfig):
             # 3a- Look at all the success logprobs and compute the easy/hard threhsold.
             success_logprobs, outcomes = get_log_probs(student_results, outcomes, i)
             
+            ratio_proven = len(success_logprobs)/len(conjectures)
+            print(len(success_logprobs), 'out of', len(conjectures), 'conjectures proven.', 'ratio =', ratio_proven)
+            wandb.log({'proved_ratio': ratio_proven, 'iteration': i})
+
             if not success_logprobs:
                 print(f'No solutions found in iteration {i} - continuing to next iteration...')
                 continue
@@ -177,9 +181,6 @@ async def teacher_loop(cfg: DictConfig):
             thresholds = [np.percentile(success_logprobs, p)
                           for _, p in difficulty_buckets]
 
-            ratio_proven = len(success_logprobs)/len(conjectures)
-            print(len(success_logprobs), 'out of', len(conjectures), 'conjectures proven.', 'ratio =', ratio_proven)
-            wandb.log({'proved_ratio': ratio_proven, 'iteration': i})
 
             print('Thresholds:',
                   list(zip([k for k, _ in difficulty_buckets], thresholds)),

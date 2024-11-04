@@ -8,7 +8,7 @@ defaults:
     - theory: nat-add
 
 n_conjectures: 200
-goals: nat-add
+goals: nat-add-synthetic
 
 difficulty_buckets:
     - hard: 20
