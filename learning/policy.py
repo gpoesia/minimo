@@ -116,6 +116,7 @@ class TransformerLMPolicy(nn.Module):
             # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
             #FIXME(f.srambical): check whether this is correct
             num_diff_problems_pairs = sum('Conj:' in s for s in b)
+            wandb.log({'ratio_diff_problems_pairs': num_diff_problems_pairs/self._batch_size})
             loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
 
             loss.backward()
