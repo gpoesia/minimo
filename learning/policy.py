@@ -12,6 +12,7 @@ import numpy as np
 
 from util import (
     softmax, pop_max, batch_strings, encode_batch, decode_batch,
+    softmax, pop_max, batch_strings, encode_batch, decode_batch,
     sample_batch, PAD, EOS, BOS, POSITIVE, NEGATIVE, EMPTY,
     batch_inference
 )

@@ -25,6 +25,7 @@ from conjecture import AgentLM, Context, sample_conjecture
 from proofsearch import make_agent
 
 from mle_logging import MLELogger
+from mle_logging import MLELogger
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +107,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
 
     with open('log.jsonl', 'w') as log_file:
+    with open('log.jsonl', 'w') as log_file:
         for i in range(start_iteration, cfg.agent.policy.total_iterations):
             context = Context(d, None, [])
 
@@ -135,6 +137,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             conjectures = []
 
             conjectured_final_goals = []
+            conjectured_final_goals = []
             while len(conjectures) < cfg.n_conjectures:
                 proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
                 proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
@@ -155,8 +158,11 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             log.debug('Conjectures: %s', conjectures)
 
             log_file.write(json.dumps({'iteration': i,
+            log_file.write(json.dumps({'iteration': i,
                                   'msg': f'It #{i}: posing {len(conjectures)} conjectures.',
                                   'conjectures': conjectures}))
+            log_file.write('\n')
+            log_file.flush()
             log_file.write('\n')
             log_file.flush()
 
@@ -224,7 +230,9 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
                             seen_hindsight_goals.add(h.goal)
 
             log_file.write(json.dumps({'iteration': i,
+            log_file.write(json.dumps({'iteration': i,
                                   'msg': f'Training on {len(examples)} examples.'}))
+            log_file.write('\n')
             log_file.write('\n')
 
             # 3c- Train model on conjecturing and proof search examples.
