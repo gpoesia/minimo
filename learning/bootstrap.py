@@ -107,8 +107,6 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
 
     with open('log.jsonl', 'w') as log_file:
         for i in range(start_iteration, cfg.agent.policy.total_iterations):
-            torch.save(agent, f'{i}.pt')
-
             context = Context(d, None, [])
 
             # Dump current agent.
