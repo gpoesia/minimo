@@ -47,6 +47,21 @@ nat_ind : [('p : [nat -> prop]) -> ('p z) -> [('n : nat) -> ('p 'n) -> ('p (s 'n
 
 ***/
 
+theorem a_zero_add : [('a0 : nat) -> (= (+ z 'a0) 'a0)] {
+  apply nat_ind.
+
+  goal (= (+ z z) z) {
+    show (= (+ z z) z) by +_z.
+  }
+  
+  goal [('n : nat) -> (= (+ z 'n) 'n) -> (= (+ z (s 'n)) (s 'n))] {
+    intro x : nat.
+    intro x0: (= (+ z x) x).
+    show (= (+ z (s x)) (s (+ z x))) by +_s.
+    show (= (+ z (s x)) (s x)) by rewrite.
+  }
+}
+
 lemma t_example1 : [('x : nat) -> ('y : nat) -> ('z : nat) ->
                     (= (+ (* x y) z) (+ (* x y) z))]
 {

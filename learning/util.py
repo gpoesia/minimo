@@ -41,6 +41,15 @@ def format_parameter_count(model):
 
     return f'{n / 10**6:.1f}B'
 
+def load_final_goals(path):
+    goals_dict = json.load(open(path))
+    final_goals = []
+    solutions = []
+    for goal in goals_dict["goals"]:
+        final_goals.append(goal["theorem"])
+        solutions.append(goal["solution"])
+
+    return final_goals, solutions
 
 def encode_batch(b: list[str], device: torch.device, bos=True, eos=True) -> torch.LongTensor:
     if not b:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import math
 
 import torch
 import transformers
@@ -29,6 +30,17 @@ class TransformerLMPolicy(nn.Module):
     def __init__(self, config):
         super().__init__()
 
+        self.config = config
+        # FIXME(f.srambical): adjust these default values
+        self.threshold = config.get('threshold', 0.5)
+        self.margin = config.get('margin', 0.1)
+        self.mu = config.get('mu', 0.)
+        self.ratio_conditioning = config.get('ratio_conditioning', False)
+        self.mu_warmup = config.get('mu_warmup', True)
+        self.mu_warmup_steps = config.get('mu_warmup_steps', 100)
+        self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
+        self.total_iterations = config.total_iterations
+
         if torch.cuda.is_available():
             cfg = transformers.GPT2Config(
                 vocab_size=128,
@@ -53,6 +65,8 @@ class TransformerLMPolicy(nn.Module):
                 n_positions=512)
             device = torch.device('cpu')
 
+        self._batch_size = config.get('batch_size', 1000)
+        self._train_batches = config.get('train_iterations', 1000)
         self._lm = transformers.GPT2LMHeadModel(cfg).to(device)
         self._optimizer = torch.optim.AdamW(self._lm.parameters(), lr=config.get('lr', 1e-4))
 
@@ -60,23 +74,53 @@ class TransformerLMPolicy(nn.Module):
         _, input_ids = self._strs_to_token_ids(strs, True)
         labels = input_ids.clone()
         labels[labels == PAD] = -100
+        if self.skip_conj_prefix_loss:
+            # Mask out loss computation for Conj:(outcome) prefix
+            for i, s in enumerate(strs):
+                if s.startswith('Conj:('):
+                    prefix_end = s.find(') ')
+                    if prefix_end != -1:
+                        # Convert prefix length to token length (add 1 for BOS token)
+                        prefix_len = len(s[:prefix_end + 2]) + 1
+                        # Set labels to -100 for all prefix tokens
+                        labels[i, :prefix_len] = -100
         attn_mask = input_ids != PAD
         return self._lm.forward(input_ids, attention_mask=attn_mask, labels=labels).loss
 
-    def fit(self, examples, batch_size, n_steps, verbose=False):
+    def val_loss(self, val_set):
+        self._lm.eval()
+        loss = self.get_loss(val_set).item()
+        return loss
+
+    def fit(self, examples, final_goals, iteration, ratio_proven, verbose=False):
         self._lm.train()
 
-        rng = range(n_steps)
+        rng = range(self._train_batches)
 
         if verbose:
             rng = tqdm(rng)
 
         for i in rng:
-            b = sample_batch(examples, batch_size)
+            b = sample_batch(examples, self._batch_size)
+            if len(b) == 0:
+                continue
             self._optimizer.zero_grad()
-            loss = self.get_loss(b)
+            train_loss = self.get_loss(b) 
+            mu = self.get_mu(ratio_proven, (iteration*self._train_batches)+i)
+            # if the ratio of proven conjectures is less than the threshold-margin
+            if ratio_proven < self.threshold - self.margin:
+                progress_loss = 0
+            else:
+                progress_loss = self.get_loss(final_goals) 
+
+            # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
+            #FIXME(f.srambical): check whether this is correct
+            num_diff_problems_pairs = sum('Conj:' in s for s in b)
+            wandb.log({'ratio_diff_problems_pairs': num_diff_problems_pairs/self._batch_size})
+            loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
+
             loss.backward()
-            wandb.log({'train_loss': loss})
+            wandb.log({'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'mu': mu})
             self._optimizer.step()
 
         self._lm.eval()
@@ -100,6 +144,15 @@ class TransformerLMPolicy(nn.Module):
         self._lm.eval()
 
         return return_value
+
+    def get_mu(self, conjectures_proved_ratio, step):
+        if self.ratio_conditioning:
+            raise NotImplementedError("Ratio-conditional mu not implemented")
+        else:
+            if self.mu_warmup and step < self.mu_warmup_steps:
+                return self.mu * (step/(self.mu_warmup_steps))
+            else:
+                return self.mu
 
     def estimate_state_values(self, states: list[str]) -> np.array:
         return self._estimate_query_values([self.format_state_query(s) for s in states])
@@ -161,7 +214,7 @@ class TransformerLMPolicy(nn.Module):
                 dist = np.exp(out.scores[j - p_len][i].cpu().numpy())
                 logprob = np.log(dist[ch] / dist.sum())
                 if np.isinf(logprob):
-                    breakpoint()
+                    raise NotImplementedError("Infinite logprob")
                 scores[i] += logprob
         return strs, scores # seqs, scores
 

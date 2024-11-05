@@ -11,10 +11,19 @@ max_examples: 1000
 policy:
     type: LM
     lr: 1e-4
+    mu: 0.0
+    ratio_conditioning: False
+    mu_warmup: True
+    mu_warmup_steps: 100
+    skip_conj_prefix_loss: True
+    # FIXME(f.srambical): these are arbitrary values; update these two values before pushing
+    threshold: 0.2
+    margin: 0.0
     value_prior_weight: 10
     max_pos_neg_ratio: 5
     train_iterations: 2000
     batch_size: 10000
+    total_iterations: 5
 
 defaults:
     - _self_

@@ -1,7 +1,10 @@
 bump-release.sh
 release-list.txt
 environment/target
+*/_*
+slurm*
 learning/__pycache__
 learning/outputs/
 uv.lock
 outputs/
+.venv/

@@ -43,16 +43,16 @@ app.conf.accept_content = ['application/json', 'application/x-python-serialize']
 
 @app.task
 def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> StudentResult:
-    with io.BytesIO(agent_dump) as f:
-        agent = torch.load(f)
-
-    print('Proving', statement, 'on', agent._policy._lm._lm.device)
-
-    state = peano.PyProofState(theory.theory,
-                               theory.premises,
-                               statement)
-
     try:
+        with io.BytesIO(agent_dump) as f:
+            agent = torch.load(f)
+
+        print('Proving', statement, 'on', agent._policy._lm._lm.device)
+
+        state = peano.PyProofState(theory.theory,
+                                theory.premises,
+                                statement)
+
         agent_result = agent.proof_search(statement, state)
 
         if agent_result.success:
@@ -60,12 +60,10 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
                 agent_result.root.get_solution_actions())
             solution_actions = agent_result.root.get_solution_actions()
             logprob = agent_result.root.solution_logprob_under_policy(agent._policy, solution_actions)
+            # TODO mihir, use same way to get log_probs of ideal theorem while conjecturing
         else:
             solution_actions, proof, logprob = None, None, None
 
-        examples = []
-        # Policy examples for the proved goal.
-        examples.extend(agent._policy.extract_examples(root=agent_result.root))
         # Hindsight examples (policy + conjecturing).
         hindsight_examples = hindsight.extract_hindsight_examples(
                 agent_result.root,
@@ -90,3 +88,10 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
         print(tb)
         return StudentResult(tb, False, statement, None, None, [],
                              None, None, None)
+    except RuntimeError as e:
+        tb = traceback.format_exc(e)
+        print('RuntimeError in try_prove!')
+        print(tb)
+        return StudentResult(tb, False, statement, None, None, [],
+                             None, None, None)
+

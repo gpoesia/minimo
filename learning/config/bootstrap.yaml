@@ -1,16 +1,18 @@
 task: teacher
 
+seed: 0
+
 defaults:
     - _self_
     - agent: mcts-lm
-    - theory: propositional-logic
+    - theory: nat-add
 
-iterations: 5
 n_conjectures: 200
+goals: nat-add-synthetic
 
 difficulty_buckets:
-    - hard: 20
-    - easy: 50
+    - hard: 50
+    - easy: 70
     - triv: 100
 
 train_policy_on_hindsight_examples: true

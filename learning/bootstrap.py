@@ -7,18 +7,20 @@ import os
 import io
 import json
 import datetime
+import random
 
 import hydra
 from omegaconf import DictConfig
 import torch
 import numpy as np
 from tqdm import tqdm
+import wandb
 
 import peano
 import worker
 from worker import StudentResult  # noqa
 from hindsight import HindsightExample  # noqa
-from util import format_blocks_with_indent, sample_batch, setup_wandb, value_color, save_json
+from util import format_blocks_with_indent, sample_batch, setup_wandb, value_color, save_json, load_final_goals
 from conjecture import AgentLM, Context, sample_conjecture
 from proofsearch import make_agent
 
@@ -47,10 +49,14 @@ def get_task_result(task):
         return task
 
 
+
 async def teacher_loop(cfg: DictConfig):
     print('Running in', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
-
     agent = make_agent(cfg)
+
+    # load goals from file and format them
+    final_goals_formatted, final_solutions = load_final_goals(os.path.join(os.path.dirname(__file__), '../goals', cfg.goals + '.json'))
+    final_goals = ["Conj:(hard) " + g for g in final_goals_formatted]
 
     with open(os.path.join(os.path.dirname(__file__), 'theories', cfg.theory.name + '.p')) as f:
         theory = f.read()
@@ -100,10 +106,27 @@ async def teacher_loop(cfg: DictConfig):
 
 
     with open('log.jsonl', 'w') as log:
-        for i in range(start_iteration, cfg.iterations):
+        for i in range(start_iteration, cfg.agent.policy.total_iterations):
             torch.save(agent, f'{i}.pt')
 
             context = Context(d, None, [])
+
+            # Dump current agent.
+            buff = io.BytesIO()
+            torch.save(agent, buff)
+            agent_dump = buff.getvalue()
+
+            # Check if and how many conjectures out of the final goal set could be proven by current policy
+            student_results_final = prove_conjectures(agent_dump, final_goals_formatted, theory, premises)
+            success_logprobs_final, outcomes_final = get_log_probs(student_results_final, outcomes, i)
+            print('Final goals proven:', len(success_logprobs_final), 'out of', len(final_goals))
+            wandb.log({'final_goals_proven': len(success_logprobs_final), 'iteration': i})
+
+            # terminate the learning loop if all final goals are proven
+            if len(success_logprobs_final) == len(final_goals):
+                print('All final goals proven - stopping learning loop...')
+                break
+
             # 1- Run conjecturing model to obtain N conjectures.
             print(now(), f'Iteration #{i}: making conjectures...')
 
@@ -117,6 +140,9 @@ async def teacher_loop(cfg: DictConfig):
                 if proposal and proposal not in conjectures + proven_conjectures:
                     conjectures.append(proposal)
                     progress_bar.update(1)
+                    if proposal in final_goals_formatted:
+                        print('Conjectured a final goal:', proposal, 'in iteration', i)
+                        wandb.log({'final_goal': proposal, 'iteration': i})
 
             progress_bar.close()
 
@@ -133,66 +159,28 @@ async def teacher_loop(cfg: DictConfig):
             log.flush()
 
             # 2- Try to prove each of the conjectures
-            tasks = []
-
-            # Dump current agent.
-            buff = io.BytesIO()
-            torch.save(agent, buff)
-            agent_dump = buff.getvalue()
-
-            print('Submitting tasks...')
-            for conjecture in tqdm(conjectures, miniters=1):
-                tasks.append(submit_task(
-                    agent_dump,
-                    worker.BackgroundTheory(theory, premises),
-                    conjecture))
+            examples = []
+            student_results= prove_conjectures(agent_dump, conjectures, theory, premises)
 
             # 3- Train model on proofs and outcome of conjectures (easy, hard, timeout)
-            examples = []
-            student_results = []
-
-            print('Collecting', len(tasks), 'results from workers.')
-
-            for task in tqdm(tasks, miniters=1):
-                student_result = get_task_result(task)
-
-                if student_result.error:
-                    print('Error in prover process!')
-                    print(student_result.error)
-                    continue
-
-                student_results.append(student_result)
-
-            success_logprobs = []
-
             # 3a- Look at all the success logprobs and compute the easy/hard threhsold.
-            for student_result in student_results:
-                if student_result.success:
-                    success_logprobs.append(student_result.logprob)
-
-                outcomes.append({'iteration': i,
-                                 'problem': student_result.problem,
-                                 'proof': student_result.proof,
-                                 'logprob': student_result.logprob,
-                                 'actions': student_result.solution_actions,
-                                 'hindsight': False
-                                 })
-
-                for h in student_result.hindsight_examples:
-                    outcomes.append({'iteration': i,
-                                     'problem': h.statement,
-                                     'proof': h.proof,
-                                     'logprob': h.logprob,
-                                     'actions': h.solution_actions,
-                                     'hindsight': True
-                                     })
+            success_logprobs, outcomes = get_log_probs(student_results, outcomes, i)
+            
+            ratio_proven = len(success_logprobs)/len(conjectures)
+            print(len(success_logprobs), 'out of', len(conjectures), 'conjectures proven.', 'ratio =', ratio_proven)
+            wandb.log({'proved_ratio': ratio_proven, 'iteration': i})
 
             if not success_logprobs:
-                print(f'No solutions found in iteration {i} - stopping learning loop...')
-                break
+                print(f'No solutions found in iteration {i} - continuing to next iteration...')
+                continue
+
+            # Add output of proving final goals to the list of proven conjectures
+            student_results.extend(student_results_final)
+            outcomes.extend(outcomes_final)
 
             thresholds = [np.percentile(success_logprobs, p)
                           for _, p in difficulty_buckets]
+
 
             print('Thresholds:',
                   list(zip([k for k, _ in difficulty_buckets], thresholds)),
@@ -236,18 +224,78 @@ async def teacher_loop(cfg: DictConfig):
             log.write('\n')
 
             # 3c- Train model on conjecturing and proof search examples.
-            if i + 1 < cfg.iterations:
+            if i + 1 < cfg.agent.policy.total_iterations:
                 print(len(examples), 'accumulated training examples.')
-                agent.train(examples)
+                agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven)
+            save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
-            save_json(outcomes, f'outcomes_{i}.json')
             torch.save(student_results, f'results_{i}.json')
+
+
+def prove_conjectures(agent_dump, conjectures, theory, premises):
+    tasks = []
+    print('Submitting tasks...')
+    for conjecture in tqdm(conjectures, miniters=1):
+        tasks.append(submit_task(
+            agent_dump,
+            worker.BackgroundTheory(theory, premises),
+            conjecture))
+
+    student_results = []
+
+    print('Collecting', len(tasks), 'results from workers.')
+
+    for task in tqdm(tasks, miniters=1):
+        student_result = get_task_result(task)
+
+        if student_result.error:
+            print('Error in prover process!')
+            print(student_result.error)
+            continue
+
+        student_results.append(student_result)
+    return student_results
+
+
+def get_log_probs(student_results, outcomes, i):
+
+    success_logprobs = []
+
+    for student_result in student_results:
+        if student_result.success:
+            success_logprobs.append(student_result.logprob)
+
+        outcomes.append({'iteration': i,
+                            'problem': student_result.problem,
+                            'proof': student_result.proof,
+                            'logprob': student_result.logprob,
+                            'actions': student_result.solution_actions,
+                            'hindsight': False
+                            })
+
+        for h in student_result.hindsight_examples:
+            outcomes.append({'iteration': i,
+                                'problem': h.statement,
+                                'proof': h.proof,
+                                'logprob': h.logprob,
+                                'actions': h.solution_actions,
+                                'hindsight': True
+                                })
+
+    return success_logprobs, outcomes
+
 
 
 @hydra.main(version_base="1.2", config_path="config", config_name="bootstrap")
 def main(cfg: DictConfig):
     print('Running from:', os.getcwd())
+    
+    seed = cfg.seed
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+
     setup_wandb(cfg)
     if cfg.task == 'teacher':
         asyncio.run(teacher_loop(cfg))
