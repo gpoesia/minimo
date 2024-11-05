@@ -19,8 +19,13 @@ train_policy_on_hindsight_examples: true
 freeze_conjecturer: false
 
 job:
+    use_wandb: true
+    use_tboard: false
+    wandb_key: None
+    wandb_entity: None
     wandb_project: peano
-
+    wandb_group: default_experiment_group
+    wandb_run_name: default_run
 hydra:
     job:
         chdir: true

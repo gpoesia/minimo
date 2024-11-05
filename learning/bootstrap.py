@@ -10,20 +10,20 @@ import datetime
 import random
 
 import hydra
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 import torch
 import numpy as np
 from tqdm import tqdm
-import wandb
 
 import peano
 import worker
 from worker import StudentResult  # noqa
 from hindsight import HindsightExample  # noqa
-from util import format_blocks_with_indent, sample_batch, setup_wandb, value_color, save_json, load_final_goals
+from util import format_blocks_with_indent, sample_batch, setup_mle_logger, value_color, save_json, load_final_goals
 from conjecture import AgentLM, Context, sample_conjecture
 from proofsearch import make_agent
 
+from mle_logging import MLELogger
 
 def now() -> str:
     return '[' + datetime.datetime.now().isoformat() + ']'
@@ -50,9 +50,9 @@ def get_task_result(task):
 
 
 
-async def teacher_loop(cfg: DictConfig):
+async def teacher_loop(cfg: DictConfig, log: MLELogger):
     print('Running in', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
-    agent = make_agent(cfg)
+    agent = make_agent(cfg, log)
 
     # load goals from file and format them
     final_goals_formatted, final_solutions = load_final_goals(os.path.join(os.path.dirname(__file__), '../goals', cfg.goals + '.json'))
@@ -105,10 +105,8 @@ async def teacher_loop(cfg: DictConfig):
         print('Ablation: Freezing conjecturer.')
 
 
-    with open('log.jsonl', 'w') as log:
+    with open('log.jsonl', 'w') as log_file:
         for i in range(start_iteration, cfg.agent.policy.total_iterations):
-            torch.save(agent, f'{i}.pt')
-
             context = Context(d, None, [])
 
             # Dump current agent.
@@ -120,7 +118,7 @@ async def teacher_loop(cfg: DictConfig):
             student_results_final = prove_conjectures(agent_dump, final_goals_formatted, theory, premises)
             success_logprobs_final, outcomes_final = get_log_probs(student_results_final, outcomes, i)
             print('Final goals proven:', len(success_logprobs_final), 'out of', len(final_goals))
-            wandb.log({'final_goals_proven': len(success_logprobs_final), 'iteration': i})
+            final_goals_proven = len(success_logprobs_final)
 
             # terminate the learning loop if all final goals are proven
             if len(success_logprobs_final) == len(final_goals):
@@ -134,6 +132,7 @@ async def teacher_loop(cfg: DictConfig):
 
             conjectures = []
 
+            conjectured_final_goals = []
             while len(conjectures) < cfg.n_conjectures:
                 proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
 
@@ -142,7 +141,7 @@ async def teacher_loop(cfg: DictConfig):
                     progress_bar.update(1)
                     if proposal in final_goals_formatted:
                         print('Conjectured a final goal:', proposal, 'in iteration', i)
-                        wandb.log({'final_goal': proposal, 'iteration': i})
+                        conjectured_final_goals.append(proposal)
 
             progress_bar.close()
 
@@ -152,11 +151,11 @@ async def teacher_loop(cfg: DictConfig):
             print(now(), 'done, have', len(conjectures), 'conjectures')
             print(conjectures)
 
-            log.write(json.dumps({'iteration': i,
+            log_file.write(json.dumps({'iteration': i,
                                   'msg': f'It #{i}: posing {len(conjectures)} conjectures.',
                                   'conjectures': conjectures}))
-            log.write('\n')
-            log.flush()
+            log_file.write('\n')
+            log_file.flush()
 
             # 2- Try to prove each of the conjectures
             examples = []
@@ -168,7 +167,6 @@ async def teacher_loop(cfg: DictConfig):
             
             ratio_proven = len(success_logprobs)/len(conjectures)
             print(len(success_logprobs), 'out of', len(conjectures), 'conjectures proven.', 'ratio =', ratio_proven)
-            wandb.log({'proved_ratio': ratio_proven, 'iteration': i})
 
             if not success_logprobs:
                 print(f'No solutions found in iteration {i} - continuing to next iteration...')
@@ -219,14 +217,21 @@ async def teacher_loop(cfg: DictConfig):
                             examples.extend(h.examples)
                             seen_hindsight_goals.add(h.goal)
 
-            log.write(json.dumps({'iteration': i,
+            log_file.write(json.dumps({'iteration': i,
                                   'msg': f'Training on {len(examples)} examples.'}))
-            log.write('\n')
+            log_file.write('\n')
 
             # 3c- Train model on conjecturing and proof search examples.
             if i + 1 < cfg.agent.policy.total_iterations:
                 print(len(examples), 'accumulated training examples.')
-                agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven)
+                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven, log=log)
+                log.update({'num_iterations': i},
+                           {'val_loss': val_loss,
+                            'final_goals_proven': final_goals_proven,
+                            'ratio_proven': ratio_proven},
+                            extra_obj={'conjectured_final_goals': conjectured_final_goals})
+
+            log.save()
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
@@ -296,9 +301,10 @@ def main(cfg: DictConfig):
     random.seed(seed)
     np.random.seed(seed)
 
-    setup_wandb(cfg)
+    log = setup_mle_logger(cfg)
+
     if cfg.task == 'teacher':
-        asyncio.run(teacher_loop(cfg))
+        asyncio.run(teacher_loop(cfg, log))
 
 if __name__ == '__main__':
     main()

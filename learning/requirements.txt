@@ -13,3 +13,5 @@ tqdm
 transformers
 wandb
 celery
+mle-logging
+tensorboard

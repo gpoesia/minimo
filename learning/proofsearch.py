@@ -11,17 +11,16 @@ import numpy as np
 import hydra
 from omegaconf import DictConfig
 import torch
-import wandb
 import os
 import json
 
 import peano
 import problems
 import policy
-from util import format_blocks_with_indent, sample_batch, setup_wandb, value_color, tqdm_if
+from util import format_blocks_with_indent, sample_batch, setup_mle_logger, value_color, tqdm_if
 from action import ProofAction
 
-
+from mle_logging import MLELogger
 @dataclass
 class GeneratedProofAction:
     action: str
@@ -655,8 +654,8 @@ class UniformPolicy(Policy):
 
 
 class LMPolicy(Policy):
-    def __init__(self, config):
-        self._lm = policy.TransformerLMPolicy(config)
+    def __init__(self, config, log):
+        self._lm = policy.TransformerLMPolicy(config, log)
         self._value_prior_weight = config.get('value_prior_weight', 1)
         self._max_positive_negative_ratio = config.get('max_positive_negative_ratio', 10)
         self._lm.eval()
@@ -796,8 +795,8 @@ class LMPolicy(Policy):
     def val_loss(self, val_set):
         return self._lm.val_loss(val_set)
 
-    def train(self, examples, final_goals, iteration, ratio_proven, verbose=True):
-        self._lm.fit(examples, final_goals, iteration, ratio_proven, verbose)
+    def train(self, examples, final_goals, iteration, ratio_proven, log, verbose=True):
+        self._lm.fit(examples, final_goals, iteration, ratio_proven, log, verbose)
         self._lm.eval()
 
 
@@ -944,11 +943,11 @@ class MonteCarloTreeSearch(Policy):
             node = node._parent[0]
 
 
-def make_policy(config):
+def make_policy(config, log):
     if not config.type:
         return None
     if config.type == 'LM':
-        return LMPolicy(config)
+        return LMPolicy(config, log)
     if config.type == 'Uniform':
         return UniformPolicy(config)
     raise ValueError(f'Unknown policy type', config.type)
@@ -964,14 +963,14 @@ class ProofSearchResult:
 
 
 class ProofSearchAgent:
-    def __init__(self, config: DictConfig):
+    def __init__(self, config: DictConfig, log: MLELogger):
         agent_config = config.agent
         self.config = config
         self._max_mcts_nodes = agent_config.get('max_mcts_nodes', 1000)
         self._max_searches = agent_config.get('max_searches', 1)
         self._max_examples = agent_config.get('max_examples', 10**8)
         self._checkpoint_every = agent_config.get('checkpoint_every', 1000)
-        self._policy = make_policy(agent_config.policy)
+        self._policy = make_policy(agent_config.policy, log)
         self._node_type = ({'vanilla': LeftmostFirstSearchNode,
                             'holophrasm': HolophrasmNode})[agent_config.get('node_type', 'holophrasm')]
         self._checkpoint_dir = agent_config.get('checkpoint_dir', 'checkpoints')
@@ -1019,7 +1018,7 @@ class ProofSearchAgent:
 
         return ProofSearchResult(problem, solved, root, examples, iterations)
 
-    def train(self, examples, final_goals, solutions, ratio_proven): 
+    def train(self, examples, final_goals, solutions, ratio_proven, log: MLELogger): 
         examples = examples or self._examples
 
         if self._training_its % self._checkpoint_every == 0:
@@ -1028,6 +1027,8 @@ class ProofSearchAgent:
             torch.save(self, path)
             self._checkpoints += 1
 
+        # FIXME(f.srambical): check whether this is problematic
+        val_loss = None
         if examples:
             example_strs = []
             for e in examples:
@@ -1038,17 +1039,17 @@ class ProofSearchAgent:
                     example_strs.append(e)
 
             # train policy
-            self._policy.train(example_strs, final_goals, self._training_its, ratio_proven)
+            self._policy.train(example_strs, final_goals, self._training_its, ratio_proven, log)
 
             # calculate validation loss
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists
             solutions_flattened = [x for xs in solutions for x in xs]
             val_loss = self._policy.val_loss(solutions_flattened)
-            wandb.log({'val_loss': val_loss})
 
         self._training_its += 1
+        return val_loss
 
-def mcts_example(cfg):
+def mcts_example(cfg, log):
     problemset = problems.load_problemset('nng')
     root_state = problemset.initialize_problem('a_zero_add')
 
@@ -1059,7 +1060,7 @@ def mcts_example(cfg):
     else:
         raise ValueError('Unknown tree search node type', cfg.node_type)
 
-    p = LMPolicy(cfg.agent.policy)
+    p = LMPolicy(cfg.agent.policy, log)
     print(root.state_node)
     mcts = MonteCarloTreeSearch(p, 3000)
 
@@ -1113,14 +1114,14 @@ def visualize_search_tree(root, path, min_visits=0):
         out.write(f'digraph TreeSearch {{\n{content}\n}}')
 
 
-def run_proof_search_agent(config):
+def run_proof_search_agent(config, log: MLELogger):
     if config.get('agent_path'):
         print('Loading from checkpoint', config.agent_path)
         agent = torch.load(config.agent_path)
         begin = config.skip
         print('Begin =', begin)
     else:
-        agent = ProofSearchAgent(config.agent)
+        agent = ProofSearchAgent(config.agent, log)
         begin = 0
 
     selector = RandomProblemSelector()
@@ -1132,18 +1133,15 @@ def run_proof_search_agent(config):
 
     for i, problem in enumerate(eval_problems):
         print('Attempting problem:', problem)
-
         try:
             result = agent.proof_search(problem, problemset.initialize_problem(problem))
             print('Success?', result.success)
-            wandb.log({'success': int(result.success)})
-
+            success_count += int(result.success)
             if result.success:
                 problemset.mark_as_solved(problem, add_to_library=config.accumulate_library)
 
-            wandb.log({'cumm_pass_rate': problemset.cumulative_pass_rate()})
-            wandb.log({'train_progress': (i + 1) / config.max_problems})
-            wandb.log({f'success/{problem}': float(result.success)})
+            log.update({'num_attempted_problem': i}, {'cumulative_pass_rate': problemset.cumulative_pass_rate()})
+            log.update({'num_attempted_problem': i}, {'train_progress': (i + 1) / config.max_problems})
 
             agent.train()
         except KeyboardInterrupt:
@@ -1151,7 +1149,7 @@ def run_proof_search_agent(config):
         except:
             import traceback; traceback.print_exc()
 
-    evaluate_agent(config, agent)
+    evaluate_agent(config, log, agent)
 
 
 def test_agent(config: DictConfig):
@@ -1297,14 +1295,14 @@ def test_proof_search(problemset='lean-library-logic',
     print(repr(actions_list))
 
 
-def make_agent(config):
+def make_agent(config, log):
     if config.get('agent_path'):
         agent = torch.load(config['agent_path'])
     elif config.agent.get('type') == 'curiosity':
         import pretraining
         agent = pretraining.CuriosityGuidedProofSearchAgent(config.agent)
     else:
-        agent = ProofSearchAgent(config)
+        agent = ProofSearchAgent(config, log)
 
     if config.agent.get('lm_path'):
         path = config.agent.get('lm_path')
@@ -1318,15 +1316,15 @@ def make_agent(config):
 
         print('Training on', len(strs), 'goal-directed examples.')
 
-        agent._policy = LMPolicy(config.agent.policy)
+        agent._policy = LMPolicy(config.agent.policy, log)
         agent._policy.train(strs, True)
 
     return agent
 
 
-def evaluate_agent(config: DictConfig, agent=None):
+def evaluate_agent(config: DictConfig, log: MLELogger, agent=None):
     if agent is None:
-        agent = make_agent(config)
+        agent = make_agent(config, log)
 
     problemset = problems.load_problemset(config.problemset)
 
@@ -1395,14 +1393,14 @@ def test_preconditions():
     print(repr(actions_list))
 
 
-def test_probability_under_policy():
+def test_probability_under_policy(log):
     nng = problems.load_problemset('natural-number-game')
     pi = LMPolicy(DictConfig({
         'value_prior_weight': 10,
         'max_pos_neg_ratio': 5,
         'batch_size': 20000,
         'train_iterations': 100,
-    }))
+    }), log)
 
     nat_add_theory = '''
 = : [('t : type) -> 't -> 't -> prop].
@@ -1455,8 +1453,6 @@ nat_ind : [('p : [nat -> prop]) -> ('p z) -> [('n : nat) -> ('p 'n) -> ('p (s 'n
                     if e['type'] == t:
                         s = e['str']
                         out.write(s.replace('\n', '\\n') + '\n')
-        wandb.log = lambda *args, **kwargs: None
-        # setup_wandb(DictConfig({'job': {'wandb_project': 'peano'}}))
 
         for i in range(10):
             print('iteration', i)
@@ -1473,20 +1469,19 @@ nat_ind : [('p : [nat -> prop]) -> ('p z) -> [('n : nat) -> ('p 'n) -> ('p (s 'n
 
 @hydra.main(version_base="1.2", config_path="config", config_name="proofsearch")
 def main(cfg: DictConfig):
+    log = setup_mle_logger(cfg)
     if cfg.task == 'proofsearch':
-        setup_wandb(cfg)
-        run_proof_search_agent(cfg)
+        run_proof_search_agent(cfg, log)
     elif cfg.task == 'mcts_example':
-        mcts_example(cfg)
+        mcts_example(cfg, log)
     elif cfg.task == 'interact':
         test_proof_search(problemset=cfg.get('problemset'),
                           problem=cfg.get('problem'),
                           agent_path=cfg.get('agent_path'))
     elif cfg.task == 'test':
-        test_probability_under_policy()
+        test_probability_under_policy(log)
     elif cfg.task == 'eval':
-        setup_wandb(cfg)
-        evaluate_agent(cfg)
+        evaluate_agent(cfg, log)
     elif cfg.task == 'visualize':
         test_agent(cfg)
 

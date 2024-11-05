@@ -7,12 +7,11 @@ import torch
 import transformers
 from torch import nn
 import torch.nn.functional as F
-import wandb
 from tqdm import tqdm
 import numpy as np
 
 from util import (
-    log, softmax, pop_max, batch_strings, encode_batch, decode_batch,
+    softmax, pop_max, batch_strings, encode_batch, decode_batch,
     sample_batch, PAD, EOS, BOS, POSITIVE, NEGATIVE, EMPTY,
     batch_inference
 )
@@ -27,7 +26,7 @@ MAX_STATE_LENGTH = 200
 
 
 class TransformerLMPolicy(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, log):
         super().__init__()
 
         self.config = config
@@ -40,6 +39,8 @@ class TransformerLMPolicy(nn.Module):
         self.mu_warmup_steps = config.get('mu_warmup_steps', 100)
         self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
         self.total_iterations = config.total_iterations
+
+        self._log = log
 
         if torch.cuda.is_available():
             cfg = transformers.GPT2Config(
@@ -92,7 +93,7 @@ class TransformerLMPolicy(nn.Module):
         loss = self.get_loss(val_set).item()
         return loss
 
-    def fit(self, examples, final_goals, iteration, ratio_proven, verbose=False):
+    def fit(self, examples, final_goals, iteration, ratio_proven, log, verbose=False):
         self._lm.train()
 
         rng = range(self._train_batches)
@@ -116,14 +117,15 @@ class TransformerLMPolicy(nn.Module):
             # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
             #FIXME(f.srambical): check whether this is correct
             num_diff_problems_pairs = sum('Conj:' in s for s in b)
-            wandb.log({'ratio_diff_problems_pairs': num_diff_problems_pairs/self._batch_size})
+            ratio_diff_problem_pairs = num_diff_problems_pairs/self._batch_size
             loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
+            log.update({'num_steps': (iteration*self._train_batches)+i}, {'loss': loss, 'train_loss': train_loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problem_pairs': ratio_diff_problem_pairs})
 
             loss.backward()
-            wandb.log({'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'mu': mu})
             self._optimizer.step()
 
         self._lm.eval()
+        return
 
     def gradient_step(self, strs, return_norm=False):
         self._lm.train()
@@ -316,9 +318,9 @@ class TransformerLMPolicy(nn.Module):
         return lengths, torch.tensor(ids, device=self._lm.device)
 
 
-def make_policy(config):
+def make_policy(config, log):
     if 'type' not in config:
         raise ValueError(f'Policy config must have a \'type\'')
     if config.type == 'TransformerLM':
-        return TransformerLMPolicy(config)
+        return TransformerLMPolicy(config, log)
     raise ValueError(f'Unknown policy type {config.type}')

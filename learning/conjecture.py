@@ -596,7 +596,7 @@ class ConjectureCompletionEngineTest(unittest.TestCase):
         for i, (c, _) in enumerate(conjectures[:100]):
             print(f'#{i}. {c}')
 
-    def test_sample_conjecture(self):
+    def test_sample_conjecture(self, log):
         # Sample 100 conjectures from a random LM.
 
         theory = '''
@@ -613,7 +613,7 @@ class ConjectureCompletionEngineTest(unittest.TestCase):
         context = Context(d, None, [])
         import proofsearch
         from omegaconf import DictConfig
-        agent = proofsearch.ProofSearchAgent(DictConfig({'policy': {'type': 'LM'}}))
+        agent = proofsearch.ProofSearchAgent(DictConfig({'policy': {'type': 'LM'}}), log)
         lm = AgentLM(agent, '')
 
         for _ in range(100):
