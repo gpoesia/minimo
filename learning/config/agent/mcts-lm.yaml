@@ -17,8 +17,8 @@ policy:
     mu_warmup_steps: 100
     skip_conj_prefix_loss: True
     # FIXME(f.srambical): these are arbitrary values; update these two values before pushing
-    threshold: 0.5
-    margin: 0.1
+    threshold: 0.2
+    margin: 0.0
     value_prior_weight: 10
     max_pos_neg_ratio: 5
     train_iterations: 2000
