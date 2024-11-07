@@ -107,7 +107,7 @@ async def teacher_loop(cfg: DictConfig):
 
     with open('log.jsonl', 'w') as log:
         for i in range(start_iteration, cfg.agent.policy.total_iterations):
-            # torch.save(agent, f'{i}.pt')
+            torch.save(agent, f'{i}.pt')
 
             context = Context(d, None, [])
 
@@ -187,9 +187,9 @@ async def teacher_loop(cfg: DictConfig):
                   'min =', np.min(success_logprobs),
                   'max =', np.max(success_logprobs))
 
-            breakpoint()
             hard_log_probs = [logprob for logprob in success_logprobs if logprob >= thresholds[0]]
             mean_hard_log_prob = np.mean(hard_log_probs) if hard_log_probs else 0
+            wandb.log({'mean_log_probs': mean_hard_log_prob, 'iteration': i})
             # 3b- Classify problems into easy/hard.
             for student_result in student_results:
                 # Outcome is the name of the first difficulty bucket that is larger than the logprob.
@@ -230,10 +230,10 @@ async def teacher_loop(cfg: DictConfig):
             if i + 1 < cfg.agent.policy.total_iterations:
                 print(len(examples), 'accumulated training examples.')
                 agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven)
-            # save_json(outcomes, f'outcomes_{i}.json')
+            save_json(outcomes, f'outcomes_{i}.json')
 
-            # save_json(examples, f'examples_{i}.json')
-            # torch.save(student_results, f'results_{i}.json')
+            save_json(examples, f'examples_{i}.json')
+            torch.save(student_results, f'results_{i}.json')
 
 
 def prove_conjectures(agent_dump, conjectures, theory, premises):
