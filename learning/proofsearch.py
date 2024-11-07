@@ -1031,6 +1031,7 @@ class ProofSearchAgent:
             self._checkpoints += 1
 
         val_loss = None
+        val_loss = None
         if examples:
             example_strs = []
             for e in examples:

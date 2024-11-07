@@ -112,6 +112,7 @@ class TransformerLMPolicy(nn.Module):
             loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
             mle_log.update({'num_steps': (iteration*self._train_batches)+i}, {'loss': loss, 'train_loss': train_loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problem_pairs': ratio_diff_problem_pairs})
 
+            wandb.log({'num_steps': (iteration*self._train_batches)+i, 'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problems_pairs': num_diff_problems_pairs/self._batch_size})
             loss.backward()
             self._optimizer.step()
 
