@@ -107,6 +107,8 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
 
     with open('log.jsonl', 'w') as log_file:
         for i in range(start_iteration, cfg.agent.policy.total_iterations):
+            # torch.save(agent, f'{i}.pt')
+
             context = Context(d, None, [])
 
             # Dump current agent.
@@ -185,6 +187,9 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
                   'min =', np.min(success_logprobs),
                   'max =', np.max(success_logprobs))
 
+            breakpoint()
+            hard_log_probs = [logprob for logprob in success_logprobs if logprob >= thresholds[0]]
+            mean_hard_log_prob = np.mean(hard_log_probs) if hard_log_probs else 0
             # 3b- Classify problems into easy/hard.
             for student_result in student_results:
                 # Outcome is the name of the first difficulty bucket that is larger than the logprob.
@@ -235,7 +240,7 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
-            torch.save(student_results, f'results_{i}.json')
+            # torch.save(student_results, f'results_{i}.json')
 
 
 def prove_conjectures(agent_dump, conjectures, theory, premises):
