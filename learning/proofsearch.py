@@ -1027,7 +1027,6 @@ class ProofSearchAgent:
             torch.save(self, path)
             self._checkpoints += 1
 
-        # FIXME(f.srambical): check whether this is problematic
         val_loss = None
         if examples:
             example_strs = []
@@ -1045,6 +1044,8 @@ class ProofSearchAgent:
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists
             solutions_flattened = [x for xs in solutions for x in xs]
             val_loss = self._policy.val_loss(solutions_flattened)
+        else:
+            print("No examples in this iteration.")
 
         self._training_its += 1
         return val_loss
