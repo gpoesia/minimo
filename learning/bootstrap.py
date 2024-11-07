@@ -120,7 +120,7 @@ async def teacher_loop(cfg: DictConfig):
             student_results_final = prove_conjectures(agent_dump, final_goals_formatted, theory, premises)
             success_logprobs_final, outcomes_final = get_log_probs(student_results_final, outcomes, i)
             print('Final goals proven:', len(success_logprobs_final), 'out of', len(final_goals))
-            wandb.log({'final_goals_proven': len(success_logprobs_final), 'iteration': i})
+            wandb.log({'num_iterations': i, 'final_goals_proven': len(success_logprobs_final)})
 
             # terminate the learning loop if all final goals are proven
             if len(success_logprobs_final) == len(final_goals):
@@ -142,7 +142,7 @@ async def teacher_loop(cfg: DictConfig):
                     progress_bar.update(1)
                     if proposal in final_goals_formatted:
                         print('Conjectured a final goal:', proposal, 'in iteration', i)
-                        wandb.log({'final_goal': proposal, 'iteration': i})
+                        wandb.log({'num_iterations': i, 'final_goal': proposal})
 
             progress_bar.close()
 
@@ -168,7 +168,7 @@ async def teacher_loop(cfg: DictConfig):
             
             ratio_proven = len(success_logprobs)/len(conjectures)
             print(len(success_logprobs), 'out of', len(conjectures), 'conjectures proven.', 'ratio =', ratio_proven)
-            wandb.log({'proved_ratio': ratio_proven, 'iteration': i})
+            wandb.log({'num_iterations': i, 'proved_ratio': ratio_proven})
 
             if not success_logprobs:
                 print(f'No solutions found in iteration {i} - continuing to next iteration...')
@@ -187,9 +187,9 @@ async def teacher_loop(cfg: DictConfig):
                   'min =', np.min(success_logprobs),
                   'max =', np.max(success_logprobs))
 
-            hard_log_probs = [logprob for logprob in success_logprobs if logprob >= thresholds[0]]
-            mean_hard_log_prob = np.mean(hard_log_probs) if hard_log_probs else 0
-            wandb.log({'mean_log_probs': mean_hard_log_prob, 'iteration': i})
+            hard_sol_log_probs = [logprob for logprob in success_logprobs if logprob >= thresholds[0]]
+            mean_hard_sol_log_prob = np.mean(hard_sol_log_probs) if hard_sol_log_probs else 0
+            wandb.log({'num_iterations': i, 'mean_hard_sol_log_probs': mean_hard_sol_log_prob})
             # 3b- Classify problems into easy/hard.
             for student_result in student_results:
                 # Outcome is the name of the first difficulty bucket that is larger than the logprob.
@@ -229,7 +229,8 @@ async def teacher_loop(cfg: DictConfig):
             # 3c- Train model on conjecturing and proof search examples.
             if i + 1 < cfg.agent.policy.total_iterations:
                 print(len(examples), 'accumulated training examples.')
-                agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven)
+                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven)
+                wandb.log({'num_iterations': i, 'val_loss': val_loss})
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
