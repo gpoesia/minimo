@@ -55,6 +55,7 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
     agent = make_agent(cfg, log)
 
     # load goals from file and format them
+    # FIXME(f.srambical): check whether the goal set is correctly formatted (check the first few finetuning examples)
     final_goals_formatted, final_solutions = load_final_goals(os.path.join(os.path.dirname(__file__), '../goals', cfg.goals + '.json'))
     final_goals = ["Conj:(hard) " + g for g in final_goals_formatted]
 
@@ -123,6 +124,8 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
             # terminate the learning loop if all final goals are proven
             if len(success_logprobs_final) == len(final_goals):
                 print('All final goals proven - stopping learning loop...')
+                log.update({'num_iterations': i},
+                           {'final_goals_proven': final_goals_proven})
                 break
 
             # 1- Run conjecturing model to obtain N conjectures.
@@ -187,7 +190,6 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
 
             hard_sol_log_probs = [logprob for logprob in success_logprobs if logprob >= thresholds[0]]
             mean_hard_sol_log_prob = np.mean(hard_sol_log_probs) if hard_sol_log_probs else 0
-            wandb.log({'num_iterations': i, 'mean_hard_sol_log_probs': mean_hard_sol_log_prob})
             # 3b- Classify problems into easy/hard.
             for student_result in student_results:
                 # Outcome is the name of the first difficulty bucket that is larger than the logprob.
@@ -231,7 +233,8 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
                 log.update({'num_iterations': i},
                            {'val_loss': val_loss,
                             'final_goals_proven': final_goals_proven,
-                            'ratio_proven': ratio_proven},
+                            'ratio_proven': ratio_proven,
+                            'mean_hard_sol_log_probs': mean_hard_sol_log_prob},
                             extra_obj={'conjectured_final_goals': conjectured_final_goals})
 
             log.save()
