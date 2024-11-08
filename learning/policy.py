@@ -54,17 +54,7 @@ class TransformerLMPolicy(nn.Module):
                 n_positions=1024)
             device = torch.device(0)
         else:
-            # Debugging on a CPU
-            cfg = transformers.GPT2Config(
-                vocab_size=128,
-                n_layer=2,
-                n_head=2,
-                n_embd=128,
-                bos_token_id=BOS,
-                eos_token_id=EOS,
-                pad_token_id=PAD,
-                n_positions=512)
-            device = torch.device('cpu')
+            raise RuntimeError("CUDA is not available. Please use a GPU.")
 
         self._batch_size = config.get('batch_size', 1000)
         self._train_batches = config.get('train_iterations', 1000)
