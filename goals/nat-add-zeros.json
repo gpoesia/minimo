@@ -1,0 +1,27 @@
+{
+    "goals": [
+        {
+            "name": "nat-add-zeros",
+            "theorem": "(= (+ z (s z)) (s (+ z (+ z z))))",
+            "solution": [
+                "S: G=1\nState: {  }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\nA: c +_s\n???Y",
+                "S: G=1\nState: {  }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct +_s\nA: => (= (+ z (s z)) (s (+ z z))).\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\nA: c +_z\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct +_z\nA: => (= (+ z z) z).\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\nA: c eq_symm\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct eq_symm\nA: => (= z (+ z z)).\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z), p1 : (= z (+ z z)) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\nA: c rewrite\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z), p1 : (= z (+ z z)) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct rewrite\nA: => (= (+ z (s z)) (s (+ z (+ z z)))).\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\n???Y",
+                "S: <solved>\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z), p1 : (= z (+ z z)) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct rewrite\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z), p1 : (= z (+ z z)) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\n???Y",
+                "S: G=1\nState: {  }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct +_s\n???Y",
+                "S: G=1\nState: {  }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))), p0 : (= (+ z z) z) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct eq_symm\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\nconstruct +_z\n???Y",
+                "S: G=1\nState: { p : (= (+ z (s z)) (s (+ z z))) }\nGoal: (= (+ z (s z)) (s (+ z (+ z z))))\n\n???Y"
+            ]
+        }
+    ]
+}
