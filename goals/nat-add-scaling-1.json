@@ -1,0 +1,11 @@
+{
+    "goals": [
+        {
+            "name": "nat-add-scaling-1",
+            "theorem": "(= z (+ z z))",
+            "solution": [
+                "S: <solved>\n???Y"
+            ]
+        }
+    ]
+}
