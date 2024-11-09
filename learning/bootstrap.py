@@ -231,10 +231,10 @@ async def teacher_loop(cfg: DictConfig):
                 print(len(examples), 'accumulated training examples.')
                 val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven)
                 wandb.log({'num_iterations': i, 'val_loss': val_loss})
-            save_json(outcomes, f'outcomes_{i}.json')
+            # save_json(outcomes, f'outcomes_{i}.json')
 
-            save_json(examples, f'examples_{i}.json')
-            torch.save(student_results, f'results_{i}.json')
+            # save_json(examples, f'examples_{i}.json')
+            # torch.save(student_results, f'results_{i}.json')
 
 
 def prove_conjectures(agent_dump, conjectures, theory, premises):
