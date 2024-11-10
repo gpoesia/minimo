@@ -20,7 +20,6 @@ freeze_conjecturer: false
 
 job:
     wandb_project: peano
-    name: default_run
 
 hydra:
     job:
