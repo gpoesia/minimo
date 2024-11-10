@@ -109,8 +109,6 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
     with open('log.jsonl', 'w') as log_file:
     with open('log.jsonl', 'w') as log_file:
         for i in range(start_iteration, cfg.agent.policy.total_iterations):
-            torch.save(agent, f'{i}.pt')
-
             context = Context(d, None, [])
 
             # Dump current agent.
@@ -133,6 +131,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             # 1- Run conjecturing model to obtain N conjectures.
             log.info('Iteration #%d: making conjectures...', i)
+            log.info('%s Iteration #%d: making conjectures...', now(), i)
 
             progress_bar = tqdm(total=cfg.n_conjectures)
 
@@ -158,6 +157,8 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             log.info('Done making %d conjectures', len(conjectures))
             log.debug('Conjectures: %s', conjectures)
+            log.info('%s done, have %d conjectures', now(), len(conjectures))
+            log.info('Conjectures: %s', conjectures)
 
             log_file.write(json.dumps({'iteration': i,
             log_file.write(json.dumps({'iteration': i,
@@ -193,6 +194,10 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
 
             log.debug('Thresholds: %s, min = %f, max = %f',
+                        list(zip([k for k, _ in difficulty_buckets], thresholds)),
+                        np.min(success_logprobs),
+                        np.max(success_logprobs))
+            log.info('Thresholds: %s, min = %f, max = %f',
                         list(zip([k for k, _ in difficulty_buckets], thresholds)),
                         np.min(success_logprobs),
                         np.max(success_logprobs))
@@ -239,9 +244,9 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             # 3c- Train model on conjecturing and proof search examples.
             if i + 1 < cfg.agent.policy.total_iterations:
-                log.info('%d accumulated training examples.', len(examples))
-                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven, mle_log=mle_log)
-                mle_log.update({'num_iterations': i},
+                print(len(examples), 'accumulated training examples.')
+                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven, log=log)
+                log.update({'num_iterations': i},
                            {'val_loss': val_loss,
                             'final_goals_proven': final_goals_proven,
                             'ratio_proven': ratio_proven,
@@ -318,10 +323,9 @@ def main(cfg: DictConfig):
     random.seed(seed)
     np.random.seed(seed)
 
-    mle_log = setup_mle_logger(cfg)
-
+    setup_wandb(cfg)
     if cfg.task == 'teacher':
-        asyncio.run(teacher_loop(cfg, mle_log))
+        asyncio.run(teacher_loop(cfg))
 
 if __name__ == '__main__':
     main()
