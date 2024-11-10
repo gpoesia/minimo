@@ -8,8 +8,10 @@ import re
 import math
 
 import peano
+import logging
 from util import batch_inference
 
+log = logging.getLogger(__name__)
 
 # Grammar for conjectures:
 # Conjecture := Prop
@@ -496,12 +498,12 @@ def conjecture_beam_search(lm, context, n_conjectures=100, prefix='', min_it=10,
 
         if len(candidates) > beam_size:
             candidates, discarded = candidates[:beam_size], candidates[beam_size:]
-            print('Discarding', len(discarded), 'candidates:', discarded)
+            log.info(f'Discarding {len(discarded)} candidates: {discarded}')
 
     complete = [c for c in complete if c not in ignored_conjectures]
-    print('Finished - have', len(complete), 'complete conjectures.')
-    print(len(candidates), 'incomplete conjectures:', candidates)
-    print('Complete:', complete)
+    log.info(f'Finished - have {len(complete)} complete conjectures.')
+    log.info(f'{len(candidates)} incomplete conjectures: {candidates}')
+    log.info(f'Complete: {complete}')
     return [(pretty_print_conjecture(c), c)
             for c in sorted_by_score(complete, lm, prefix)[:n_conjectures]]
 
@@ -571,9 +573,9 @@ class ConjectureCompletionEngineTest(unittest.TestCase):
 
         node, _, completions = Conjecture.parse(tokens, context)
         completions = space_completions(s, completions)
-        print('Completions:', completions)
-        print('Parsed node:', node)
-        print(context.decls)
+        log.info(f'Completions: {completions}')
+        log.info(f'Parsed node: {node}')
+        log.info(context.decls)
 
     def test_beam_search(self):
         theory = '''
@@ -591,10 +593,10 @@ class ConjectureCompletionEngineTest(unittest.TestCase):
         lm = RandomLM()
 
         conjectures = conjecture_beam_search(lm, context, 1000, '', 100)
-        print('Conjectures:')
+        log.info(f'Conjectures: {conjectures}')
 
         for i, (c, _) in enumerate(conjectures[:100]):
-            print(f'#{i}. {c}')
+            log.info(f'#{i}. {c}')
 
     def test_sample_conjecture(self, log):
         # Sample 100 conjectures from a random LM.
@@ -617,7 +619,7 @@ class ConjectureCompletionEngineTest(unittest.TestCase):
         lm = AgentLM(agent, '')
 
         for _ in range(100):
-            print(sample_conjecture(lm, context, '', 100))
+            log.info(sample_conjecture(lm, context, '', 100))
 
     def test_propositional_logic_conjectures(self):
         with open('theories/propositional-logic.p', 'r') as f:
@@ -629,4 +631,4 @@ class ConjectureCompletionEngineTest(unittest.TestCase):
         context = Context(d, None, [])
         lm = RandomLM()
         for _ in range(50):
-            print(sample_conjecture(lm, context, 50))
+            log.info(sample_conjecture(lm, context, 50))

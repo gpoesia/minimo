@@ -6,11 +6,13 @@ import random
 from omegaconf import DictConfig
 
 import problems
+import logging
 import peano
 import proofsearch
 from action import ProofAction
 from util import format_blocks_with_indent
 
+log = logging.getLogger(__name__)
 
 @dataclass
 class HindsightExample:
@@ -58,8 +60,8 @@ def extract_hindsight_examples(root,
                                                 premises,
                                                 states_on_path[0][0].goal())
         except:
-            print('Oh no')
-            raise NotImplementedError("Could not generalize theorem statement")
+            log.error('Could not generalize theorem statement')
+            raise ValueError("Could not generalize theorem statement")
 
         new_root = proofsearch.HolophrasmNode([new_root_state])
         cleaned_path = traverse_path(new_root, path)
@@ -221,25 +223,20 @@ def _test_hindsight(problem, theory, premises):
     mcts = proofsearch.MonteCarloTreeSearch(pi)
     success, _, _, _ = mcts.evaluate(root)
 
-    print(problem, "Success? ", success)
+    log.info(f'{problem} Success? {success}')
 
     ex = extract_hindsight_examples(root, theory, premises, pi)
 
-    print(len(ex), 'examples')
+    log.info(f'{len(ex)} examples')
 
     for i, e in enumerate(ex):
-        print('#' * 80)
-        print(f'Example {i}:')
-        print('#' * 80)
-        print('Goal:', e.goal)
-        print('Statement:', e.statement)
-        print('Proof:')
-        print('-' * 80)
-        print(format_blocks_with_indent(e.proof))
-        print('-' * 80)
-        print('Logprob:', e.logprob)
-        print(len(e.examples), 'training examples.')
-        print()
+        log.info(f'Example {i}:')
+        log.info(f'Goal: {e.goal}')
+        log.info(f'Statement: {e.statement}')
+        log.info('Proof:')
+        log.info(format_blocks_with_indent(e.proof))
+        log.info(f'Logprob: {e.logprob}')
+        log.info(f'{len(e.examples)} training examples.')
 
 
 def test_natadd():

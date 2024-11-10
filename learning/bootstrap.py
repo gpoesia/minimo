@@ -10,6 +10,7 @@ import datetime
 import random
 
 import hydra
+import logging
 from omegaconf import DictConfig, OmegaConf
 import torch
 import numpy as np
@@ -24,6 +25,8 @@ from conjecture import AgentLM, Context, sample_conjecture
 from proofsearch import make_agent
 
 from mle_logging import MLELogger
+
+log = logging.getLogger(__name__)
 
 def now() -> str:
     return '[' + datetime.datetime.now().isoformat() + ']'
@@ -50,9 +53,9 @@ def get_task_result(task):
 
 
 
-async def teacher_loop(cfg: DictConfig, log: MLELogger):
-    print('Running in', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
-    agent = make_agent(cfg, log)
+async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
+    log.info('Running in %s', 'distributed mode.' if DISTRIBUTED else 'single-process mode.')
+    agent = make_agent(cfg, mle_log)
 
     # load goals from file and format them
     # FIXME(f.srambical): check whether the goal set is correctly formatted (check the first few finetuning examples)
@@ -80,7 +83,7 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
 
     if continue_dir is not None:
         os.chdir(continue_dir)
-        print('Continuing run from', continue_dir)
+        log.info('Continuing run from %s', continue_dir)
         # Find largest iteration number such that i.pt exists.
         i = 0
         while os.path.exists(f'{i}.pt'):
@@ -88,7 +91,7 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
         i -= 1
         start_iteration = i
         agent = torch.load(f'{i}.pt')
-        print('Loaded agent from', f'{i}.pt')
+        log.info('Loaded agent from %s', f'{i}.pt')
         # Load examples and outcomes.
         if i > 0:
             with open(f'outcomes_{i-1}.json', 'r') as f:
@@ -99,11 +102,11 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
                 seen_hindsight_goals = {o['problem'] for o in outcomes
                                         if o['hindsight'] and o['proof'] is not None}
 
-        print('Loaded', len(proven_conjectures), 'proven conjectures from previous run.')
+        log.info('Loaded %d proven conjectures from previous run.', len(proven_conjectures))
 
 
     if cfg.get('freeze_conjecturer', False):
-        print('Ablation: Freezing conjecturer.')
+        log.info('Ablation: Freezing conjecturer.')
 
 
     with open('log.jsonl', 'w') as log_file:
@@ -118,18 +121,18 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
             # Check if and how many conjectures out of the final goal set could be proven by current policy
             student_results_final = prove_conjectures(agent_dump, final_goals_formatted, theory, premises)
             success_logprobs_final, outcomes_final = get_log_probs(student_results_final, outcomes, i)
-            print('Final goals proven:', len(success_logprobs_final), 'out of', len(final_goals))
+            log.info('Final goals proven: %d out of %d', len(success_logprobs_final), len(final_goals))
             final_goals_proven = len(success_logprobs_final)
 
             # terminate the learning loop if all final goals are proven
             if len(success_logprobs_final) == len(final_goals):
-                print('All final goals proven - stopping learning loop...')
-                log.update({'num_iterations': i},
+                log.info('All final goals proven - stopping learning loop...')
+                mle_log.update({'num_iterations': i},
                            {'final_goals_proven': final_goals_proven})
                 break
 
             # 1- Run conjecturing model to obtain N conjectures.
-            print(now(), f'Iteration #{i}: making conjectures...')
+            log.info('%s Iteration #%d: making conjectures...', now(), i)
 
             progress_bar = tqdm(total=cfg.n_conjectures)
 
@@ -143,7 +146,7 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
                     conjectures.append(proposal)
                     progress_bar.update(1)
                     if proposal in final_goals_formatted:
-                        print('Conjectured a final goal:', proposal, 'in iteration', i)
+                        log.info('Conjectured a final goal: %s in iteration %d', proposal, i)
                         conjectured_final_goals.append(proposal)
 
             progress_bar.close()
@@ -151,8 +154,8 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
             # Contract conjectures to make them Peano-parseable.
             conjectures = [d.contract(c) for c in conjectures]
 
-            print(now(), 'done, have', len(conjectures), 'conjectures')
-            print(conjectures)
+            log.info('%s done, have %d conjectures', now(), len(conjectures))
+            log.info('Conjectures: %s', conjectures)
 
             log_file.write(json.dumps({'iteration': i,
                                   'msg': f'It #{i}: posing {len(conjectures)} conjectures.',
@@ -169,10 +172,11 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
             success_logprobs, outcomes = get_log_probs(student_results, outcomes, i)
             
             ratio_proven = len(success_logprobs)/len(conjectures)
-            print(len(success_logprobs), 'out of', len(conjectures), 'conjectures proven.', 'ratio =', ratio_proven)
+            log.info('%d out of %d conjectures proven. ratio = %f', 
+                        len(success_logprobs), len(conjectures), ratio_proven)
 
             if not success_logprobs:
-                print(f'No solutions found in iteration {i} - continuing to next iteration...')
+                log.warning('No solutions found in iteration %d - continuing to next iteration...', i)
                 continue
 
             # Add output of proving final goals to the list of proven conjectures
@@ -183,10 +187,10 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
                           for _, p in difficulty_buckets]
 
 
-            print('Thresholds:',
-                  list(zip([k for k, _ in difficulty_buckets], thresholds)),
-                  'min =', np.min(success_logprobs),
-                  'max =', np.max(success_logprobs))
+            log.info('Thresholds: %s, min = %f, max = %f',
+                        list(zip([k for k, _ in difficulty_buckets], thresholds)),
+                        np.min(success_logprobs),
+                        np.max(success_logprobs))
 
             hard_sol_log_probs = [logprob for logprob in success_logprobs if logprob >= thresholds[0]]
             mean_hard_sol_log_prob = np.mean(hard_sol_log_probs) if hard_sol_log_probs else 0
@@ -228,16 +232,16 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
 
             # 3c- Train model on conjecturing and proof search examples.
             if i + 1 < cfg.agent.policy.total_iterations:
-                print(len(examples), 'accumulated training examples.')
-                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven, log=log)
-                log.update({'num_iterations': i},
+                log.info('%d accumulated training examples.', len(examples))
+                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven, log=mle_log)
+                mle_log.update({'num_iterations': i},
                            {'val_loss': val_loss,
                             'final_goals_proven': final_goals_proven,
                             'ratio_proven': ratio_proven,
                             'mean_hard_sol_log_probs': mean_hard_sol_log_prob},
                             extra_obj={'conjectured_final_goals': conjectured_final_goals})
 
-            log.save()
+            mle_log.save()
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
@@ -246,7 +250,7 @@ async def teacher_loop(cfg: DictConfig, log: MLELogger):
 
 def prove_conjectures(agent_dump, conjectures, theory, premises):
     tasks = []
-    print('Submitting tasks...')
+    log.info('Submitting tasks...')
     for conjecture in tqdm(conjectures, miniters=1):
         tasks.append(submit_task(
             agent_dump,
@@ -255,14 +259,14 @@ def prove_conjectures(agent_dump, conjectures, theory, premises):
 
     student_results = []
 
-    print('Collecting', len(tasks), 'results from workers.')
+    log.info('Collecting %d results from workers.', len(tasks))
 
     for task in tqdm(tasks, miniters=1):
         student_result = get_task_result(task)
 
         if student_result.error:
-            print('Error in prover process!')
-            print(student_result.error)
+            log.error('Error in prover process!')
+            log.error(student_result.error)
             continue
 
         student_results.append(student_result)
@@ -300,17 +304,17 @@ def get_log_probs(student_results, outcomes, i):
 
 @hydra.main(version_base="1.2", config_path="config", config_name="bootstrap")
 def main(cfg: DictConfig):
-    print('Running from:', os.getcwd())
+    log.info('Running from: %s', os.getcwd())
     
     seed = cfg.seed
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
 
-    log = setup_mle_logger(cfg)
+    mle_log = setup_mle_logger(cfg)
 
     if cfg.task == 'teacher':
-        asyncio.run(teacher_loop(cfg, log))
+        asyncio.run(teacher_loop(cfg, mle_log))
 
 if __name__ == '__main__':
     main()

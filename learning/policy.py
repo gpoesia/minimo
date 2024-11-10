@@ -15,6 +15,7 @@ from util import (
     sample_batch, PAD, EOS, BOS, POSITIVE, NEGATIVE, EMPTY,
     batch_inference
 )
+from mle_logging import MLELogger
 
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ MAX_STATE_LENGTH = 200
 
 
 class TransformerLMPolicy(nn.Module):
-    def __init__(self, config, log):
+    def __init__(self, config, mle_log: MLELogger):
         super().__init__()
 
         self.config = config
@@ -40,7 +41,7 @@ class TransformerLMPolicy(nn.Module):
         self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
         self.total_iterations = config.total_iterations
 
-        self._log = log
+        self._mle_log = mle_log
 
         if torch.cuda.is_available():
             cfg = transformers.GPT2Config(
@@ -83,7 +84,7 @@ class TransformerLMPolicy(nn.Module):
         loss = self.get_loss(val_set).item()
         return loss
 
-    def fit(self, examples, final_goals, iteration, ratio_proven, log, verbose=False):
+    def fit(self, examples, final_goals, iteration, ratio_proven, mle_log: MLELogger, verbose=False):
         self._lm.train()
 
         rng = range(self._train_batches)
@@ -109,7 +110,7 @@ class TransformerLMPolicy(nn.Module):
             num_diff_problems_pairs = sum('Conj:' in s for s in b)
             ratio_diff_problem_pairs = num_diff_problems_pairs/self._batch_size
             loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
-            log.update({'num_steps': (iteration*self._train_batches)+i}, {'loss': loss, 'train_loss': train_loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problem_pairs': ratio_diff_problem_pairs})
+            mle_log.update({'num_steps': (iteration*self._train_batches)+i}, {'loss': loss, 'train_loss': train_loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problem_pairs': ratio_diff_problem_pairs})
 
             loss.backward()
             self._optimizer.step()
@@ -308,9 +309,9 @@ class TransformerLMPolicy(nn.Module):
         return lengths, torch.tensor(ids, device=self._lm.device)
 
 
-def make_policy(config, log):
+def make_policy(config, mle_log: MLELogger):
     if 'type' not in config:
         raise ValueError(f'Policy config must have a \'type\'')
     if config.type == 'TransformerLM':
-        return TransformerLMPolicy(config, log)
+        return TransformerLMPolicy(config, mle_log)
     raise ValueError(f'Unknown policy type {config.type}')

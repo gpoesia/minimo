@@ -19,6 +19,7 @@ train_policy_on_hindsight_examples: true
 freeze_conjecturer: false
 
 job:
+    name: default_run
     use_wandb: false
     use_tboard: false
     wandb_key: None
@@ -28,6 +29,6 @@ job:
 hydra:
     job:
         chdir: true
-        name: default_run
+        name: ${job.name}
     run:
         dir: outputs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
