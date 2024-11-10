@@ -114,13 +114,14 @@ class TransformerLMPolicy(nn.Module):
             else:
                 progress_loss = self.get_loss(final_goals) 
                 self._mu_warmup_step += 1
+
             # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
             #FIXME(f.srambical): check whether this is correct
             num_diff_problems_pairs = sum('Conj:' in s for s in b)
             loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
-            loss.backward()
 
-            wandb.log({'num_steps': (iteration*self._train_batches)+i, 'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'mu': mu})
+            wandb.log({'num_steps': (iteration*self._train_batches)+i, 'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problems_pairs': num_diff_problems_pairs/self._batch_size})
+            loss.backward()
             self._optimizer.step()
 
         self._lm.eval()
@@ -150,7 +151,7 @@ class TransformerLMPolicy(nn.Module):
             raise NotImplementedError("Ratio-conditional mu not implemented")
         else:
             if self.mu_warmup and self._mu_warmup_step < self.mu_warmup_steps:
-                return self.mu * (self._mu_warmup_step/(self.mu_warmup_steps))
+-                return self.mu * (self._mu_warmup_step/(self.mu_warmup_steps))
             else:
                 return self.mu
 
