@@ -7,6 +7,8 @@ import traceback
 import os
 
 import torch
+import logging
+import logging
 from omegaconf import DictConfig
 from celery import Celery
 
@@ -14,6 +16,8 @@ import peano
 import proofsearch
 import policy
 import hindsight
+
+log = logging.getLogger(__name__)
 
 @dataclass
 class StudentResult:
@@ -47,7 +51,7 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
         with io.BytesIO(agent_dump) as f:
             agent = torch.load(f)
 
-        print('Proving', statement, 'on', agent._policy._lm._lm.device)
+        log.debug('Proving %s on %s', statement, agent._policy._lm._lm.device)
 
         state = peano.PyProofState(theory.theory,
                                 theory.premises,
@@ -84,14 +88,12 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
         )
     except BaseException as e:
         tb = traceback.format_exc(e)
-        print('Error in try_prove!')
-        print(tb)
+        log.excpetion('Error in try_prove.')
         return StudentResult(tb, False, statement, None, None, [],
                              None, None, None)
     except RuntimeError as e:
         tb = traceback.format_exc(e)
-        print('RuntimeError in try_prove!')
-        print(tb)
+        log.exception('RuntimeError in try_prove.')
         return StudentResult(tb, False, statement, None, None, [],
                              None, None, None)
 

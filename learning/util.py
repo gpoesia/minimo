@@ -3,7 +3,6 @@
 import collections
 import math
 import random
-import os
 import logging
 import json
 import signal
@@ -12,10 +11,14 @@ from functools import wraps
 
 import altair
 import torch
-import wandb
 import numpy as np
-from omegaconf import DictConfig, OmegaConf, open_dict
+from typing import Dict
+from omegaconf import DictConfig
 from tqdm import tqdm
+
+from mle_logging import MLELogger
+import requests
+import time
 
 
 PAD = 0
@@ -24,6 +27,8 @@ EOS = 2
 POSITIVE = ord(';')
 NEGATIVE = ord('$')
 EMPTY = '\x03'
+
+
 
 def count_parameters(model):
     return sum(math.prod(p.shape) for p in model.parameters())
@@ -238,20 +243,25 @@ def choose_from_list(prompt, l, to_str=str):
     return l[int(input('> '))]
 
 
-def setup_wandb(cfg: DictConfig):
-    if cfg.job.get("wandb_project"):
-        with open_dict(cfg.job):
-            cfg.job.cwd = os.getcwd()
-        wandb.init(
-                project=cfg.job.wandb_project,
-                resume=cfg.job.get('resume', False),
-                config=OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True))
-        for key in logging.Logger.manager.loggerDict.keys():
-            if key.startswith('wandb'):
-                logging.getLogger(key).setLevel(logging.WARNING)
-    else:
-        # Disable wandb (i.e., make log() a no-op).
-        wandb.log = lambda *args, **kwargs: None
+def setup_mle_logger(cfg: DictConfig):
+    log = MLELogger(time_to_track=['num_iterations', 'num_steps'],
+                what_to_track=['train_loss', 'progress_loss', 'loss', 'val_loss', 'proved_ratio', 'mu', 'final_goals_proven'],
+                experiment_dir="experiment_dir/",
+                use_tboard=cfg.job.use_tboard,
+                use_wandb=cfg.job.use_wandb,
+                wandb_config={
+                    "key": cfg.job.wandb_key,
+                    "entity": cfg.job.wandb_entity,
+                    "project": cfg.job.wandb_project,
+                    "group": cfg.job.wandb_group,
+                    "name": cfg.job.name,
+                },
+                model_type='torch')
+    for key in logging.Logger.manager.loggerDict.keys():
+        if key.startswith('wandb'):
+            logging.getLogger(key).setLevel(logging.WARNING)
+
+    return log
 
 
 def count_inversions(l: list):

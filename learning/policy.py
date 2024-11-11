@@ -7,15 +7,15 @@ import torch
 import transformers
 from torch import nn
 import torch.nn.functional as F
-import wandb
 from tqdm import tqdm
 import numpy as np
 
 from util import (
-    log, softmax, pop_max, batch_strings, encode_batch, decode_batch,
+    softmax, pop_max, batch_strings, encode_batch, decode_batch,
     sample_batch, PAD, EOS, BOS, POSITIVE, NEGATIVE, EMPTY,
     batch_inference
 )
+from mle_logging import MLELogger
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ MAX_STATE_LENGTH = 200
 
 
 class TransformerLMPolicy(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, mle_log: MLELogger):
         super().__init__()
 
         self.config = config
@@ -41,6 +41,8 @@ class TransformerLMPolicy(nn.Module):
         self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
         self.total_iterations = config.total_iterations
 
+        self._mle_log = mle_log
+
         if torch.cuda.is_available():
             cfg = transformers.GPT2Config(
                 vocab_size=128,
@@ -53,17 +55,7 @@ class TransformerLMPolicy(nn.Module):
                 n_positions=1024)
             device = torch.device(0)
         else:
-            # Debugging on a CPU
-            cfg = transformers.GPT2Config(
-                vocab_size=128,
-                n_layer=2,
-                n_head=2,
-                n_embd=128,
-                bos_token_id=BOS,
-                eos_token_id=EOS,
-                pad_token_id=PAD,
-                n_positions=512)
-            device = torch.device('cpu')
+            raise RuntimeError("CUDA is not available. Please use a GPU.")
 
         self._batch_size = config.get('batch_size', 1000)
         self._train_batches = config.get('train_iterations', 1000)
@@ -92,7 +84,7 @@ class TransformerLMPolicy(nn.Module):
         loss = self.get_loss(val_set).item()
         return loss
 
-    def fit(self, examples, final_goals, iteration, ratio_proven, verbose=False):
+    def fit(self, examples, final_goals, iteration, ratio_proven, mle_log: MLELogger, verbose=False):
         self._lm.train()
 
         rng = range(self._train_batches)
@@ -116,13 +108,14 @@ class TransformerLMPolicy(nn.Module):
             # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
             #FIXME(f.srambical): check whether this is correct
             num_diff_problems_pairs = sum('Conj:' in s for s in b)
+            ratio_diff_problem_pairs = num_diff_problems_pairs/self._batch_size
             loss = train_loss + mu * num_diff_problems_pairs * progress_loss 
-
-            wandb.log({'num_steps': (iteration*self._train_batches)+i, 'train_loss': train_loss, 'loss': loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problems_pairs': num_diff_problems_pairs/self._batch_size})
+            mle_log.update({'num_steps': (iteration*self._train_batches)+i}, {'loss': loss, 'train_loss': train_loss, 'progress_loss': progress_loss, 'mu': mu, 'ratio_diff_problem_pairs': ratio_diff_problem_pairs})
             loss.backward()
             self._optimizer.step()
 
         self._lm.eval()
+        return
 
     def gradient_step(self, strs, return_norm=False):
         self._lm.train()
@@ -315,9 +308,9 @@ class TransformerLMPolicy(nn.Module):
         return lengths, torch.tensor(ids, device=self._lm.device)
 
 
-def make_policy(config):
+def make_policy(config, mle_log: MLELogger):
     if 'type' not in config:
         raise ValueError(f'Policy config must have a \'type\'')
     if config.type == 'TransformerLM':
-        return TransformerLMPolicy(config)
+        return TransformerLMPolicy(config, mle_log)
     raise ValueError(f'Unknown policy type {config.type}')
