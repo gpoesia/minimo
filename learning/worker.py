@@ -50,7 +50,7 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
         with io.BytesIO(agent_dump) as f:
             agent = torch.load(f)
 
-        log.info('Proving', statement, 'on', agent._policy._lm._lm.device)
+        log.debug('Proving %s on %s', statement, agent._policy._lm._lm.device)
 
         state = peano.PyProofState(theory.theory,
                                 theory.premises,

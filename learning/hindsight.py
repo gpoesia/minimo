@@ -223,20 +223,20 @@ def _test_hindsight(problem, theory, premises):
     mcts = proofsearch.MonteCarloTreeSearch(pi)
     success, _, _, _ = mcts.evaluate(root)
 
-    log.info(f'{problem} Success? {success}')
+    log.debug(f'{problem} Success? {success}')
 
     ex = extract_hindsight_examples(root, theory, premises, pi)
 
-    log.info(f'{len(ex)} examples')
+    log.debug(f'{len(ex)} examples')
 
     for i, e in enumerate(ex):
-        log.info(f'Example {i}:')
-        log.info(f'Goal: {e.goal}')
-        log.info(f'Statement: {e.statement}')
-        log.info('Proof:')
-        log.info(format_blocks_with_indent(e.proof))
-        log.info(f'Logprob: {e.logprob}')
-        log.info(f'{len(e.examples)} training examples.')
+        log.debug(f'Example {i}:')
+        log.debug(f'Goal: {e.goal}')
+        log.debug(f'Statement: {e.statement}')
+        log.debug('Proof:')
+        log.debug(format_blocks_with_indent(e.proof))
+        log.debug(f'Logprob: {e.logprob}')
+        log.debug(f'{len(e.examples)} training examples.')
 
 
 def test_natadd():

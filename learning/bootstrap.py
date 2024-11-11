@@ -154,8 +154,8 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             # Contract conjectures to make them Peano-parseable.
             conjectures = [d.contract(c) for c in conjectures]
 
-            log.info('%s done, have %d conjectures', now(), len(conjectures))
-            log.info('Conjectures: %s', conjectures)
+            log.info('%s Done making %d conjectures', now(), len(conjectures))
+            log.debug('Conjectures: %s', conjectures)
 
             log_file.write(json.dumps({'iteration': i,
                                   'msg': f'It #{i}: posing {len(conjectures)} conjectures.',
@@ -187,7 +187,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
                           for _, p in difficulty_buckets]
 
 
-            log.info('Thresholds: %s, min = %f, max = %f',
+            log.debug('Thresholds: %s, min = %f, max = %f',
                         list(zip([k for k, _ in difficulty_buckets], thresholds)),
                         np.min(success_logprobs),
                         np.max(success_logprobs))

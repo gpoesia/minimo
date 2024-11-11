@@ -989,7 +989,7 @@ class ProofSearchAgent:
         examples = []
 
         while not (node.is_terminal() or node.is_dead()):
-            log.info(f'State: {node.state_node}')
+            log.debug(f'State: {node.state_node}')
 
             mcts = MonteCarloTreeSearch(self._policy, self._max_mcts_nodes, use_policy=True)
             solved, pi, _, it = mcts.evaluate(node)
@@ -997,12 +997,12 @@ class ProofSearchAgent:
             if solved:
                 break
 
-            log.info(f'Actions: {list(map(str, node.actions))}')
-            log.info(f'Policy: {pi}')
+            log.debug(f'Actions: {list(map(str, node.actions))}')
+            log.debug(f'Policy: {pi}')
 
             best = pi.argmax()
 
-            log.info(f'Taking action {node.actions[best]}')
+            log.debug(f'Taking action {node.actions[best]}')
             node = node.children()[best]
 
             iterations += 1
@@ -1010,10 +1010,10 @@ class ProofSearchAgent:
                 break
 
         if solved:
-            log.info('Found solution!')
-            log.info(format_blocks_with_indent(root.reconstruct_proof()))
+            log.debug('Found solution!')
+            log.debug(format_blocks_with_indent(root.reconstruct_proof()))
         else:
-            log.info('Did not find solution.')
+            log.debug('Did not find solution.')
 
         examples = self._policy.extract_examples(root)
         self._examples.extend(examples)
@@ -1065,24 +1065,24 @@ def mcts_example(cfg, mle_log: MLELogger):
         raise ValueError('Unknown tree search node type', cfg.node_type)
 
     p = LMPolicy(cfg.agent.policy, mle_log)
-    log.info(f'State: {root.state_node}')
+    log.debug(f'State: {root.state_node}')
     mcts = MonteCarloTreeSearch(p, 3000)
 
     solved, pi, _ = mcts.evaluate(root)
 
-    log.info(f'Actions: {list(map(str, root.actions))}')
-    log.info(f'MCTS Policy: {pi}')
+    log.debug(f'Actions: {list(map(str, root.actions))}')
+    log.debug(f'MCTS Policy: {pi}')
 
     if solved:
-        log.info('Found solution!')
-        log.info(format_blocks_with_indent(root.reconstruct_proof()))
+        log.debug('Found solution!')
+        log.debug(format_blocks_with_indent(root.reconstruct_proof()))
     else:
-        log.info('Did not find solution.')
+        log.debug('Did not find solution.')
 
     examples = p.extract_examples(root)
 
-    log.info(f'{len(examples)} training examples extracted')
-    log.info('\n'.join(examples))
+    log.debug(f'{len(examples)} training examples extracted')
+    log.debug('\n'.join(examples))
     visualize_search_tree(root, os.path.join(os.path.dirname(__file__), 'mcts_example.dot'))
 
 
@@ -1123,7 +1123,7 @@ def run_proof_search_agent(config, mle_log: MLELogger):
         log.info(f'Loading from checkpoint {config.agent_path}')
         agent = torch.load(config.agent_path)
         begin = config.skip
-        log.info(f'Begin = {begin}')
+        log.debug(f'Begin = {begin}')
     else:
         agent = ProofSearchAgent(config.agent, mle_log)
         begin = 0
@@ -1136,10 +1136,10 @@ def run_proof_search_agent(config, mle_log: MLELogger):
                      problemset.problem_names()[:config.max_problems])
 
     for i, problem in enumerate(eval_problems):
-        log.info(f'Attempting problem: {problem}')
+        log.debug(f'Attempting problem: {problem}')
         try:
             result = agent.proof_search(problem, problemset.initialize_problem(problem))
-            log.info(f'Success? {result.success}')
+            log.debug(f'Success? {result.success}')
             success_count += int(result.success)
             if result.success:
                 problemset.mark_as_solved(problem, add_to_library=config.accumulate_library)
@@ -1174,7 +1174,7 @@ def test_agent(config: DictConfig):
         mcts.evaluate(root)
 
     visualize_search_tree(root, dot_path, min_visits=config.get('min_visits', 10))
-    log.info(f'Wrote {os.path.abspath(dot_path)}')
+    log.debug(f'Wrote {os.path.abspath(dot_path)}')
 
 
 def proof_reconstruction_example():
@@ -1221,10 +1221,10 @@ def proof_reconstruction_example():
                 current = current.expand(ac)
                 break
 
-    log.info(f'Proof has {len(actions)} actions.')
+    log.debug(f'Proof has {len(actions)} actions.')
 
     blocks, _ = root.reconstruct_proof(actions)
-    log.info(format_blocks_with_indent(blocks))
+    log.debug(format_blocks_with_indent(blocks))
 
 
 def test_proof_search(problemset='lean-library-logic',
@@ -1256,8 +1256,8 @@ def test_proof_search(problemset='lean-library-logic',
     actions_list = []
 
     while not node.is_terminal():
-        log.info(f'Node: {str(node.state_node)}')
-        log.info('Actions:')
+        log.debug(f'Node: {str(node.state_node)}')
+        log.debug('Actions:')
 
         node.expand()
 
@@ -1272,31 +1272,31 @@ def test_proof_search(problemset='lean-library-logic',
 
         for i, c in enumerate(node.children()):
             lp, nlp = action_logprobs[i], action_logprobs[i] / len(actions[i])
-            log.info(f'#{i}. {c._parent[1]} ({lp:.3f}/{nlp:.3f})')
+            log.debug(f'#{i}. {c._parent[1]} ({lp:.3f}/{nlp:.3f})')
 
         if not actions:
-            log.info('Dead end: no further actions and not a terminal node.')
+            log.debug('Dead end: no further actions and not a terminal node.')
             return
 
         if pi is not None:
             g = node.state_node._proof_states[0].format_goal()
             goal_logprob = pi._lm.goal_logprob(node.state_node._proof_states[0].format_context(), g)
-            log.info(f'Agent logprob for current goal: {goal_logprob} / {goal_logprob / len(g)}')
+            log.debug(f'Agent logprob for current goal: {goal_logprob} / {goal_logprob / len(g)}')
 
             goals, scores = pi._lm.sample_provable_goals(
                 node.state_node._proof_states[0].format_context(), l=100, n=5)
-            log.info('Agent samples of provable goals:')
+            log.debug('Agent samples of provable goals:')
 
             for g, s in zip(goals, scores):
-                log.info(f'{g} -- {s} / {s / len(g)}')
+                log.debug(f'{g} -- {s} / {s / len(g)}')
 
         idx = int(input('Choose action:'))
 
         node = node.children()[idx]
         actions_list.append(node._parent[1])
 
-    log.info('Actions:')
-    log.info(repr(actions_list))
+    log.debug('Actions:')
+    log.debug(repr(actions_list))
 
 
 def make_agent(config, mle_log: MLELogger):
@@ -1318,7 +1318,7 @@ def make_agent(config, mle_log: MLELogger):
             examples = json.load(f)
         strs = [e['str'] for e in examples if e['type'] == 'policy']
 
-        log.info(f'Training on {len(strs)} goal-directed examples.')
+        log.debug(f'Training on {len(strs)} goal-directed examples.')
 
         agent._policy = LMPolicy(config.agent.policy, mle_log)
         agent._policy.train(strs, True)
@@ -1336,7 +1336,7 @@ def evaluate_agent(config: DictConfig, mle_log: MLELogger, agent=None):
     end = config.get('end', len(problemset))
 
     for problem in problemset.problem_names()[begin:end]:
-        log.info(f'Attempting problem: {problem}')
+        log.debug(f'Attempting problem: {problem}')
         try:
             result = agent.proof_search(problem, problemset.initialize_problem(problem))
         except KeyboardInterrupt:
@@ -1344,13 +1344,13 @@ def evaluate_agent(config: DictConfig, mle_log: MLELogger, agent=None):
         except:
             log.exception('Error during proof search agent evaluation.')
             result = ProofSearchResult(problem, False, None, [], 0)
-        log.info(f'Success? {result.success}')
+        log.debug(f'Success? {result.success}')
 
         if result.success:
             problemset.mark_as_solved(problem, add_to_library=False)
 
-    log.info(f'Solved {len(problemset._solved)}/{len(problemset)}')
-    log.info(f'Solved problems: {", ".join(problemset._solved)}')
+    log.debug(f'Solved {len(problemset._solved)}/{len(problemset)}')
+    log.debug(f'Solved problems: {", ".join(problemset._solved)}')
 
 
 def test_preconditions():
@@ -1372,16 +1372,16 @@ def test_preconditions():
     actions_list = []
 
     while not node.is_terminal():
-        log.info(f'Node: {node}')
-        log.info('Actions:')
+        log.debug(f'Node: {node}')
+        log.debug('Actions:')
 
         actions = node.actions
 
         for i, a in enumerate(actions):
-            log.info(f'#{i}. {a}')
+            log.debug(f'#{i}. {a}')
 
         if not actions:
-            log.info('Dead end: no further actions and not a terminal node.')
+            log.debug('Dead end: no further actions and not a terminal node.')
             return
 
         idx = int(input('Choose action:'))
@@ -1391,9 +1391,9 @@ def test_preconditions():
         actions_list.append(a)
         probability /= len(actions)
 
-    log.info(f'Proved! Probability under random policy: {probability}')
-    log.info('Actions:')
-    log.info(repr(actions_list))
+    log.debug(f'Proved! Probability under random policy: {probability}')
+    log.debug('Actions:')
+    log.debug(repr(actions_list))
 
 
 def test_probability_under_policy(mle_log: MLELogger):
@@ -1436,20 +1436,20 @@ nat_ind : [('p : [nat -> prop]) -> ('p z) -> [('n : nat) -> ('p 'n) -> ('p (s 'n
     success, _, _, _ = mcts.evaluate(root)
 
     if not success:
-        log.info('Failed.')
+        log.debug('Failed.')
     else:
-        log.info('Success!')
+        log.debug('Success!')
         prob = root.solution_logprob_under_policy(pi)
-        log.info(f'logprob under policy: {prob}')
+        log.debug(f'logprob under policy: {prob}')
 
         examples = pi.extract_examples(root)
-        log.info(f'{len(examples)} examples.')
+        log.debug(f'{len(examples)} examples.')
 
         import collections
         types = collections.Counter([e['type'] for e in examples])
-        log.info(f'Number of examples: {types.most_common()}')
+        log.debug(f'Number of examples: {types.most_common()}')
 
-        log.info(os.getcwd())
+        log.debug(os.getcwd())
         for t in types:
             with open(f'examples-{t}.txt', 'w') as out:
                 for e in examples:
@@ -1458,14 +1458,14 @@ nat_ind : [('p : [nat -> prop]) -> ('p z) -> [('n : nat) -> ('p 'n) -> ('p (s 'n
                         out.write(s.replace('\n', '\\n') + '\n')
 
         for i in range(10):
-            log.info(f'iteration {i}')
+            log.debug(f'iteration {i}')
             pi.train([e['str'] for e in examples])
             prob = root.solution_logprob_under_policy(pi)
-            log.info(f'logprob under policy after training: {prob}')
+            log.debug(f'logprob under policy after training: {prob}')
             root = TreeSearchNode(HolophrasmNode([nng.initialize_problem('a_zero_add')]))
             success, _, _, it = mcts.evaluate(root)
             assert success
-            log.info(f'solved in {it} MCTS iterations.')
+            log.debug(f'solved in {it} MCTS iterations.')
             examples = pi.extract_examples(root)
 
 
