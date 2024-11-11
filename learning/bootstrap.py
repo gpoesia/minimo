@@ -28,10 +28,6 @@ from mle_logging import MLELogger
 
 log = logging.getLogger(__name__)
 
-def now() -> str:
-    return '[' + datetime.datetime.now().isoformat() + ']'
-
-
 FAIL = "fail"
 
 
@@ -132,7 +128,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
                 break
 
             # 1- Run conjecturing model to obtain N conjectures.
-            log.info('%s Iteration #%d: making conjectures...', now(), i)
+            log.info('Iteration #%d: making conjectures...', i)
 
             progress_bar = tqdm(total=cfg.n_conjectures)
 
@@ -154,7 +150,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             # Contract conjectures to make them Peano-parseable.
             conjectures = [d.contract(c) for c in conjectures]
 
-            log.info('%s Done making %d conjectures', now(), len(conjectures))
+            log.info('Done making %d conjectures', len(conjectures))
             log.debug('Conjectures: %s', conjectures)
 
             log_file.write(json.dumps({'iteration': i,
