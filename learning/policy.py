@@ -144,7 +144,7 @@ class TransformerLMPolicy(nn.Module):
             raise NotImplementedError("Ratio-conditional mu not implemented")
         else:
             if self.mu_warmup and self._mu_warmup_step < self.mu_warmup_steps:
--                return self.mu * (self._mu_warmup_step/(self.mu_warmup_steps))
+                return self.mu * (self._mu_warmup_step/(self.mu_warmup_steps))
             else:
                 return self.mu
 
