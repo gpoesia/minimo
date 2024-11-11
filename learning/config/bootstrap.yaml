@@ -32,3 +32,4 @@ hydra:
         name: ${job.name}
     run:
         dir: outputs/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+    verbose: true
