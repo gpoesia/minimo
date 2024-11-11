@@ -307,9 +307,10 @@ def main(cfg: DictConfig):
     random.seed(seed)
     np.random.seed(seed)
 
-    setup_mle_logger(cfg)
+    mle_log = setup_mle_logger(cfg)
+
     if cfg.task == 'teacher':
-        asyncio.run(teacher_loop(cfg))
+        asyncio.run(teacher_loop(cfg, mle_log))
 
 if __name__ == '__main__':
     main()
