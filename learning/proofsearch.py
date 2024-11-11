@@ -816,7 +816,8 @@ class MonteCarloTreeSearch(Policy):
         self._exploration_c = np.sqrt(2) / 2
         self._exploration_prefix = exploration_prefix
         self._use_default_policy = use_policy
-
+        self._max_depth = 0
+        
     def expand(self, root: TreeSearchNode, on_expand=None, verbose=True):
         return self.evaluate(root, on_expand=on_expand, verbose=verbose)
 
@@ -857,11 +858,13 @@ class MonteCarloTreeSearch(Policy):
         value = max(p * (c._reward / max(1, c._visits))
                     for p, c in zip(pi, root.children()))
 
+        log.debug('MCTS depth: %d', self._max_depth)
         return root.is_solved(), pi, value, i
 
     def _tree_policy(self, node):
         prefix = list(self._exploration_prefix or [])
 
+        depth = 0
         while not (node.is_leaf() or node.is_terminal()):
             prefix_action = self._next_action_from_prefix(node, prefix)
             a = prefix_action if prefix_action is not None else self._uct(node)
@@ -870,7 +873,9 @@ class MonteCarloTreeSearch(Policy):
                 return None
 
             node = node.children()[a]
+            depth += 1
 
+        self._max_depth = max(self._max_depth, depth)
         return node
 
     def _next_action_from_prefix(self, node, prefix):
