@@ -58,6 +58,7 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
                                 statement)
 
         agent_result = agent.proof_search(statement, state)
+        log.debug('Proof search for %s completed.', statement)
 
         if agent_result.success:
             proof = agent_result.root.state_node.reconstruct_proof(
