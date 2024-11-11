@@ -237,9 +237,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
                             seen_hindsight_goals.add(h.goal)
 
             log_file.write(json.dumps({'iteration': i,
-            log_file.write(json.dumps({'iteration': i,
                                   'msg': f'Training on {len(examples)} examples.'}))
-            log_file.write('\n')
             log_file.write('\n')
 
             # 3c- Train model on conjecturing and proof search examples.
