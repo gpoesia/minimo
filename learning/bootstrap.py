@@ -241,7 +241,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
-            # torch.save(student_results, f'results_{i}.json')
+            torch.save(agent, "model.pt")
 
 
 def prove_conjectures(agent_dump, conjectures, theory, premises):
