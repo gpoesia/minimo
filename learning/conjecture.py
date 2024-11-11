@@ -9,10 +9,8 @@ import math
 
 import peano
 import logging
-import logging
 from util import batch_inference
 
-log = logging.getLogger(__name__)
 log = logging.getLogger(__name__)
 
 # Grammar for conjectures:

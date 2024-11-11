@@ -25,7 +25,6 @@ from conjecture import AgentLM, Context, sample_conjecture
 from proofsearch import make_agent
 
 from mle_logging import MLELogger
-from mle_logging import MLELogger
 
 log = logging.getLogger(__name__)
 
