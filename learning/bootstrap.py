@@ -229,8 +229,8 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             # 3c- Train model on conjecturing and proof search examples.
             if i + 1 < cfg.agent.policy.total_iterations:
                 print(len(examples), 'accumulated training examples.')
-                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven, log=log)
-                log.update({'num_iterations': i},
+                val_loss = agent.train(examples=examples, final_goals=final_goals, solutions=final_solutions, ratio_proven=ratio_proven, mle_log=mle_log)
+                mle_log.update({'num_iterations': i},
                            {'val_loss': val_loss,
                             'final_goals_proven': final_goals_proven,
                             'ratio_proven': ratio_proven,
