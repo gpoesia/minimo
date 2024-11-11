@@ -88,7 +88,7 @@ def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> St
         )
     except BaseException as e:
         tb = traceback.format_exc(e)
-        log.excpetion('Error in try_prove.')
+        log.exception('Error in try_prove.')
         return StudentResult(tb, False, statement, None, None, [],
                              None, None, None)
     except RuntimeError as e:
