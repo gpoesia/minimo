@@ -107,7 +107,6 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
 
     with open('log.jsonl', 'w') as log_file:
-    with open('log.jsonl', 'w') as log_file:
         for i in range(start_iteration, cfg.agent.policy.total_iterations):
             context = Context(d, None, [])
 
@@ -131,16 +130,13 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             # 1- Run conjecturing model to obtain N conjectures.
             log.info('Iteration #%d: making conjectures...', i)
-            log.info('%s Iteration #%d: making conjectures...', now(), i)
 
             progress_bar = tqdm(total=cfg.n_conjectures)
 
             conjectures = []
 
             conjectured_final_goals = []
-            conjectured_final_goals = []
             while len(conjectures) < cfg.n_conjectures:
-                proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
                 proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
 
                 if proposal and proposal not in conjectures + proven_conjectures:
@@ -156,16 +152,11 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
             conjectures = [d.contract(c) for c in conjectures]
 
             log.info('Done making %d conjectures', len(conjectures))
-            log.debug('Conjectures: %s', conjectures)
-            log.info('%s done, have %d conjectures', now(), len(conjectures))
             log.info('Conjectures: %s', conjectures)
 
             log_file.write(json.dumps({'iteration': i,
-            log_file.write(json.dumps({'iteration': i,
                                   'msg': f'It #{i}: posing {len(conjectures)} conjectures.',
                                   'conjectures': conjectures}))
-            log_file.write('\n')
-            log_file.flush()
             log_file.write('\n')
             log_file.flush()
 
@@ -194,10 +185,6 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
 
             log.debug('Thresholds: %s, min = %f, max = %f',
-                        list(zip([k for k, _ in difficulty_buckets], thresholds)),
-                        np.min(success_logprobs),
-                        np.max(success_logprobs))
-            log.info('Thresholds: %s, min = %f, max = %f',
                         list(zip([k for k, _ in difficulty_buckets], thresholds)),
                         np.min(success_logprobs),
                         np.max(success_logprobs))
@@ -321,7 +308,7 @@ def main(cfg: DictConfig):
     random.seed(seed)
     np.random.seed(seed)
 
-    setup_wandb(cfg)
+    setup_mle_logger(cfg)
     if cfg.task == 'teacher':
         asyncio.run(teacher_loop(cfg))
 

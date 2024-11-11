@@ -1052,7 +1052,6 @@ class ProofSearchAgent:
 
         self._training_its += 1
         return val_loss
-        return val_loss
 
 def mcts_example(cfg, mle_log: MLELogger):
     problemset = problems.load_problemset('nng')
