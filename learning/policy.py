@@ -40,6 +40,7 @@ class TransformerLMPolicy(nn.Module):
         self.mu_warmup_steps = config.get('mu_warmup_steps', 100)
         self.skip_conj_prefix_loss = config.get('skip_conj_prefix_loss', False)
         self.total_iterations = config.total_iterations
+        self._mu_warmup_step = 0
 
         self._mle_log = mle_log
 
@@ -98,12 +99,13 @@ class TransformerLMPolicy(nn.Module):
                 continue
             self._optimizer.zero_grad()
             train_loss = self.get_loss(b) 
-            mu = self.get_mu(ratio_proven, (iteration*self._train_batches)+i)
+            mu = self.get_mu(ratio_proven)
             # if the ratio of proven conjectures is less than the threshold-margin
             if ratio_proven < self.threshold - self.margin:
                 progress_loss = 0
             else:
                 progress_loss = self.get_loss(final_goals) 
+                self._mu_warmup_step += 1
 
             # we need to multiply by len(batch | grep Conj:) because we want mu to be invariant to the number of difficulty--problem pairs in the batch
             #FIXME(f.srambical): check whether this is correct
@@ -137,12 +139,12 @@ class TransformerLMPolicy(nn.Module):
 
         return return_value
 
-    def get_mu(self, conjectures_proved_ratio, step):
+    def get_mu(self, conjectures_proved_ratio):
         if self.ratio_conditioning:
             raise NotImplementedError("Ratio-conditional mu not implemented")
         else:
-            if self.mu_warmup and step < self.mu_warmup_steps:
-                return self.mu * (step/(self.mu_warmup_steps))
+            if self.mu_warmup and self._mu_warmup_step < self.mu_warmup_steps:
+-                return self.mu * (self._mu_warmup_step/(self.mu_warmup_steps))
             else:
                 return self.mu
 
