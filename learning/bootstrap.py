@@ -8,6 +8,7 @@ import io
 import json
 import datetime
 import random
+import yaml
 
 import hydra
 import logging
@@ -72,7 +73,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
     proven_conjectures = []
     seen_hindsight_goals = set()
     proofs = []
-    outcomes = []
+    model_info = dict()
 
     continue_dir = cfg.get('continue')
     start_iteration = 0
@@ -81,25 +82,11 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
         os.chdir(continue_dir)
         log.info('Continuing run from %s', continue_dir)
         # Find largest iteration number such that i.pt exists.
-        i = 0
-        while os.path.exists(f'{i}.pt'):
-            i += 1
-        i -= 1
-        start_iteration = i
-        agent = torch.load(f'{i}.pt')
-        log.info('Loaded agent from %s', f'{i}.pt')
-        # Load examples and outcomes.
-        if i > 0:
-            with open(f'outcomes_{i-1}.json', 'r') as f:
-                outcomes = json.load(f)
-                proven_conjectures = [o['problem'] for o in outcomes
-                                      if o['hindsight'] is False and
-                                         o['proof'] is not None]
-                seen_hindsight_goals = {o['problem'] for o in outcomes
-                                        if o['hindsight'] and o['proof'] is not None}
-
-        log.info('Loaded %d proven conjectures from previous run.', len(proven_conjectures))
-
+        log.info('Starting from iteration %d', start_iteration)
+        agent = torch.load(f'model.pt')
+        with open('model_info.yaml') as f:
+            model_info = yaml.safe_load(f)
+        start_iteration = model_info['iteration'] + 1
 
     if cfg.get('freeze_conjecturer', False):
         log.info('Ablation: Freezing conjecturer.')
@@ -116,7 +103,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             # Check if and how many conjectures out of the final goal set could be proven by current policy
             student_results_final = prove_conjectures(agent_dump, final_goals_formatted, theory, premises)
-            success_logprobs_final, outcomes_final = get_log_probs(student_results_final, outcomes, i)
+            success_logprobs_final = get_log_probs(student_results_final, i)
             log.info('Final goals proven: %d out of %d', len(success_logprobs_final), len(final_goals))
             final_goals_proven = len(success_logprobs_final)
 
@@ -163,7 +150,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             # 3- Train model on proofs and outcome of conjectures (easy, hard, timeout)
             # 3a- Look at all the success logprobs and compute the easy/hard threhsold.
-            success_logprobs, outcomes = get_log_probs(student_results, outcomes, i)
+            success_logprobs = get_log_probs(student_results, i)
             
             ratio_proven = len(success_logprobs)/len(conjectures)
             log.info('%d out of %d conjectures proven. ratio = %f', 
@@ -175,7 +162,6 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             # Add output of proving final goals to the list of proven conjectures
             student_results.extend(student_results_final)
-            outcomes.extend(outcomes_final)
 
             thresholds = [np.percentile(success_logprobs, p)
                           for _, p in difficulty_buckets]
@@ -236,10 +222,12 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
                             extra_obj={'conjectured_final_goals': conjectured_final_goals})
 
             mle_log.save()
-            save_json(outcomes, f'outcomes_{i}.json')
 
             save_json(examples, f'examples_{i}.json')
             torch.save(agent, "model.pt")
+            model_info['iteration'] = i
+            with open('model_info.yaml', 'w') as f:
+                yaml.dump(model_info, f)
 
 
 def prove_conjectures(agent_dump, conjectures, theory, premises):
@@ -267,7 +255,7 @@ def prove_conjectures(agent_dump, conjectures, theory, premises):
     return student_results
 
 
-def get_log_probs(student_results, outcomes, i):
+def get_log_probs(student_results, i):
 
     success_logprobs = []
 
@@ -275,24 +263,7 @@ def get_log_probs(student_results, outcomes, i):
         if student_result.success:
             success_logprobs.append(student_result.logprob)
 
-        outcomes.append({'iteration': i,
-                            'problem': student_result.problem,
-                            'proof': student_result.proof,
-                            'logprob': student_result.logprob,
-                            'actions': student_result.solution_actions,
-                            'hindsight': False
-                            })
-
-        for h in student_result.hindsight_examples:
-            outcomes.append({'iteration': i,
-                                'problem': h.statement,
-                                'proof': h.proof,
-                                'logprob': h.logprob,
-                                'actions': h.solution_actions,
-                                'hindsight': True
-                                })
-
-    return success_logprobs, outcomes
+    return success_logprobs
 
 
 
