@@ -8,6 +8,7 @@ import io
 import json
 import datetime
 import random
+import yaml
 
 import hydra
 import logging
@@ -72,6 +73,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
     proven_conjectures = []
     seen_hindsight_goals = set()
     proofs = []
+    model_info = dict()
 
     continue_dir = cfg.get('continue')
     start_iteration = 0
@@ -80,9 +82,11 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
         os.chdir(continue_dir)
         log.info('Continuing run from %s', continue_dir)
         # Find largest iteration number such that i.pt exists.
-        start_iteration = 0
         log.info('Starting from iteration %d', start_iteration)
         agent = torch.load(f'model.pt')
+        with open('model_info.yaml') as f:
+            model_info = yaml.safe_load(f)
+        start_iteration = model_info['iteration'] + 1
 
     if cfg.get('freeze_conjecturer', False):
         log.info('Ablation: Freezing conjecturer.')
@@ -221,6 +225,9 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             save_json(examples, f'examples_{i}.json')
             torch.save(agent, "model.pt")
+            model_info['iteration'] = i
+            with open('model_info.yaml', 'w') as f:
+                yaml.dump(model_info, f)
 
 
 def prove_conjectures(agent_dump, conjectures, theory, premises):

@@ -9,6 +9,7 @@ defaults:
 
 n_conjectures: 200
 goals: nat-add-synthetic
+continue: None
 
 difficulty_buckets:
     - hard: 50
