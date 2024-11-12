@@ -83,7 +83,6 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
         start_iteration = 0
         log.info('Starting from iteration %d', start_iteration)
         agent = torch.load(f'model.pt')
-        log.info('Loaded agent from %s', f'{i}.pt')
 
     if cfg.get('freeze_conjecturer', False):
         log.info('Ablation: Freezing conjecturer.')
