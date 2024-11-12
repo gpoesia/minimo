@@ -149,7 +149,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
 
             log.info('Done making %d conjectures', len(conjectures))
             log.info('Conjectures: %s', conjectures)
-            log.info('Conjectured %d final goals: %s', len(conjectured_final_goals))
+            log.info('Conjectured %d final goals', len(conjectured_final_goals))
 
             log_file.write(json.dumps({'iteration': i,
                                   'msg': f'It #{i}: posing {len(conjectures)} conjectures.',
