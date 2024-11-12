@@ -33,7 +33,6 @@ class TransformerLMPolicy(nn.Module):
         self.config = config
         # FIXME(f.srambical): adjust these default values
         self.threshold = config.get('threshold', 0.5)
-        self.margin = config.get('margin', 0.1)
         self.mu = config.get('mu', 0.)
         self.ratio_conditioning = config.get('ratio_conditioning', False)
         self.mu_warmup = config.get('mu_warmup', True)
@@ -100,8 +99,8 @@ class TransformerLMPolicy(nn.Module):
             self._optimizer.zero_grad()
             train_loss = self.get_loss(b) 
             mu = self.get_mu(ratio_proven)
-            # if the ratio of proven conjectures is less than the threshold-margin
-            if ratio_proven < self.threshold - self.margin:
+            # if the ratio of proven conjectures is less than the threshold
+            if ratio_proven < self.threshold:
                 progress_loss = 0
             else:
                 progress_loss = self.get_loss(final_goals) 
