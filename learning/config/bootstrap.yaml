@@ -9,7 +9,7 @@ defaults:
 
 n_conjectures: 200
 goals: nat-add-synthetic
-continue: None
+continue: null
 
 difficulty_buckets:
     - hard: 20
@@ -23,8 +23,8 @@ job:
     name: default_run
     use_wandb: false
     use_tboard: false
-    wandb_key: None
-    wandb_entity: None
+    wandb_key: null
+    wandb_entity: null
     wandb_project: peano
     wandb_group: default_experiment_group
 hydra:
