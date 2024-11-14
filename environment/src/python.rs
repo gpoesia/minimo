@@ -4,12 +4,12 @@ use pyo3::exceptions::PyValueError;
 use pyo3::Python;
 use crate::universe::{Context, Derivation, Definition, Term, ProofState, ProofAction};
 
-#[pyclass(unsendable)]
+#[pyclass]
 struct PyDerivation {
     pub universe: Derivation,
 }
 
-#[pyclass(unsendable)]
+#[pyclass]
 struct PyDefinition {
     pub def: Definition,
     pub action: String,
@@ -252,7 +252,7 @@ fn value_of(def: &Definition, ctx: &Context) -> String {
 }
 
 
-#[pyclass(unsendable)]
+#[pyclass]
 struct PyProofState {
     pub proof_state: ProofState
 }
@@ -451,7 +451,7 @@ impl PyProofState {
 }
 
 #[derive(Eq, PartialEq)]
-#[pyclass(unsendable)]
+#[pyclass]
 struct PyProofAction {
     pub proof_action: ProofAction
 }
@@ -491,40 +491,6 @@ impl PyProofAction {
     }
 }
 
-#[pyclass(unsendable)]
-pub struct Solve {
-    universe: Derivation,
-}
-
-#[pymethods]
-impl Solve {
-    #[new]
-    pub fn new() -> Solve {
-        Solve { universe: Derivation::new() }
-    }
-
-    pub fn load_theorem(&mut self, theorem: &str) -> PyResult<usize> {
-        match theorem.parse::<Context>() {
-            Err(err) => Err(PyValueError::new_err(err.to_string())),
-            Ok(ctx) => {
-                self.universe.incorporate(&ctx);
-                Ok(ctx.insertion_order.len())
-            }
-        }
-    }
-    
-    pub fn prove(&mut self, theorem_name: String) -> PyResult<()> {
-        match self.universe.execute_proof(&theorem_name) {
-            Err(err) => Err(PyValueError::new_err(err.to_string())),
-            // if err isincomplete proof, return derivation
-            // to return deivation, PyResult<()> should be PyResult<ProofExecutuion> struct with derivation, success etc.
-            Ok(()) => {
-                Ok(())
-            }
-        }
-    }
-}
-
 #[pyfunction]
 fn unify(t1: String, t2: String) -> PyResult<Vec<(String, String)>> {
     match (t1.parse::<Term>(), t2.parse::<Term>()) {
@@ -547,7 +513,6 @@ fn peano(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyDerivation>()?;
     m.add_class::<PyProofState>()?;
     m.add_class::<PyProofAction>()?;
-    m.add_class::<Solve>()?;
     m.add_function(wrap_pyfunction!(unify, m)?)?;
     Ok(())
 }

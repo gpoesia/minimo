@@ -1,5 +1,5 @@
 use std::option::Option;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::collections::hash_set::{HashSet, Iter};
 use std::collections::hash_map::HashMap;
 use std::io;

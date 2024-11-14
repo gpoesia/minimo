@@ -1,5 +1,5 @@
 use std::option::Option;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::collections::hash_set::{HashSet, Iter};
 use std::collections::hash_map::HashMap;
 use std::io;
@@ -21,8 +21,8 @@ const LOCAL_DEFINITION_PREFIX: &str = &"!tac"; // Terms that are local to a tact
 pub struct Derivation {
     pub context_: Context,
     next_id: usize,
-    inhabited_types: HashMap<Rc<Term>, Vec<String>>,
-    existing_values: HashMap<Rc<Term>, String>,
+    inhabited_types: HashMap<Arc<Term>, Vec<String>>,
+    existing_values: HashMap<Arc<Term>, String>,
 }
 
 // Returns whether the string contains a valid `real` constant.
@@ -52,11 +52,11 @@ fn argument_satisfies(arg: &str, arg_expr: &Option<String>) -> bool {
 }
 
 impl Derivation {
-    pub fn get_type_constant(&self) -> &Rc<Term> {
+    pub fn get_type_constant(&self) -> &Arc<Term> {
         self.context().get_type_constant()
     }
 
-    pub fn get_prop_constant(&self) -> &Rc<Term> {
+    pub fn get_prop_constant(&self) -> &Arc<Term> {
         self.context().get_prop_constant()
     }
 
@@ -72,7 +72,7 @@ impl Derivation {
         }
 
         for annotation in context.annotations.iter() {
-            Rc::make_mut(&mut self.context_mut().annotations).push(annotation.clone());
+            Arc::make_mut(&mut self.context_mut().annotations).push(annotation.clone());
         }
     }
 
@@ -93,7 +93,7 @@ impl Derivation {
         Err(ProofError::ProofNotFound(name.clone()))
     }
 
-    pub fn set_goals(&mut self, goals: Vec<Rc<Term>>) {
+    pub fn set_goals(&mut self, goals: Vec<Arc<Term>>) {
         self.context_.goals = goals;
     }
 
@@ -200,15 +200,15 @@ impl Derivation {
     }
 
     fn nondeterministically_apply_arrow(&self,
-                                        arrow_object: &Rc<Term>,
-                                        input_types: &Vec<Rc<Term>>,
-                                        output_type: &Rc<Term>,
-                                        inputs: &mut Vec<Rc<Term>>,
+                                        arrow_object: &Arc<Term>,
+                                        input_types: &Vec<Arc<Term>>,
+                                        output_type: &Arc<Term>,
+                                        inputs: &mut Vec<Arc<Term>>,
                                         predetermined: &Vec<Option<String>>,
                                         substitutions: &mut HashMap<String, String>,
                                         ghost_arguments: usize,
                                         scope: &Option<Scope>,
-                                        results: &mut Vec<(Rc<Term>, Rc<Term>)>) {
+                                        results: &mut Vec<(Arc<Term>, Arc<Term>)>) {
         let next = inputs.len();
 
         // If we have filled up all arguments.
@@ -267,7 +267,7 @@ impl Derivation {
                 // other parameter types (if any, i.e., if this is a dependent arrow) and
                 // keep going.
 
-                let mut remaining_types : Vec<Rc<Term>> = input_types.clone();
+                let mut remaining_types : Vec<Arc<Term>> = input_types.clone();
                 let mut output_type = output_type.clone();
 
                 for (name, value) in unifier.iter() {
@@ -349,7 +349,7 @@ impl Derivation {
 
                             let mut results = Vec::new();
                             self.nondeterministically_apply_arrow(
-                                &Rc::new(Term::Atom { name: action.clone() }),
+                                &Arc::new(Term::Atom { name: action.clone() }),
                                 input_types,
                                 output_type,
                                 &mut Vec::new(),
@@ -390,19 +390,19 @@ impl Derivation {
 
                         if let (Ok(n1), Ok(n2)) = (lhs, rhs) {
                             if let Some(result) = apply_builtin_binary_op(n1, n2, name) {
-                                let eq_type = Rc::new(Term::Application {
-                                    function: Rc::new(Term::Atom { name: String::from("=") }),
+                                let eq_type = Arc::new(Term::Application {
+                                    function: Arc::new(Term::Atom { name: String::from("=") }),
                                     arguments: vec![
                                         val.clone(),
-                                        Rc::new(Term::Atom { name: result.to_string() }),
+                                        Arc::new(Term::Atom { name: result.to_string() }),
                                     ]
                                 });
 
                                 new_terms.push(Definition {
                                     dtype: eq_type,
-                                    value: Some(Rc::new(Term::Application {
-                                        function: Rc::new(Term::Atom { name: String::from("eval") }),
-                                        arguments: vec![Rc::new(Term::Atom { name: obj_name.clone() })],
+                                    value: Some(Arc::new(Term::Application {
+                                        function: Arc::new(Term::Atom { name: String::from("eval") }),
+                                        arguments: vec![Arc::new(Term::Atom { name: obj_name.clone() })],
                                     })),
                                     location: None,
                                 });
@@ -417,13 +417,13 @@ impl Derivation {
                 let evaluated_term = val.eval(&self.context_);
                 if evaluated_term != *val {
                     new_terms.push(Definition {
-                        dtype: Rc::new(Term::Application {
-                            function: Rc::new(Term::Atom { name: String::from("=") }),
+                        dtype: Arc::new(Term::Application {
+                            function: Arc::new(Term::Atom { name: String::from("=") }),
                             arguments: vec![val.clone(), evaluated_term.clone()],
                         }),
-                        value: Some(Rc::new(Term::Application {
-                            function: Rc::new(Term::Atom { name: String::from("eval") }),
-                            arguments: vec![Rc::new(Term::Atom { name: obj_name.clone() })],
+                        value: Some(Arc::new(Term::Application {
+                            function: Arc::new(Term::Atom { name: String::from("eval") }),
+                            arguments: vec![Arc::new(Term::Atom { name: obj_name.clone() })],
                         })),
                         location: None,
                     });
@@ -439,19 +439,19 @@ impl Derivation {
 
         let val = match &def.value {
             Some(v) => v.clone(),
-            None => Rc::new(Term::Atom { name: name.clone() })
+            None => Arc::new(Term::Atom { name: name.clone() })
         };
 
-        let eq_type = Rc::new(Term::Application {
-            function: Rc::new(Term::Atom { name: String::from("=") }),
+        let eq_type = Arc::new(Term::Application {
+            function: Arc::new(Term::Atom { name: String::from("=") }),
             arguments: vec![val.clone(), val]
         });
 
         new_terms.push(Definition {
             dtype: eq_type,
-            value: Some(Rc::new(Term::Application {
-                function: Rc::new(Term::Atom { name: String::from("eq_refl") }),
-                arguments: vec![Rc::new(Term::Atom { name: name.clone() })],
+            value: Some(Arc::new(Term::Application {
+                function: Arc::new(Term::Atom { name: String::from("eq_refl") }),
+                arguments: vec![Arc::new(Term::Atom { name: name.clone() })],
             })),
             location: None,
         });
@@ -463,15 +463,15 @@ impl Derivation {
                 return;
             }
 
-            let eq_type = Rc::new(Term::Application {
-                function: Rc::new(Term::Atom { name: String::from("=") }),
+            let eq_type = Arc::new(Term::Application {
+                function: Arc::new(Term::Atom { name: String::from("=") }),
                 arguments: vec![t2, t1]
             });
             new_terms.push(Definition {
                 dtype: eq_type,
-                value: Some(Rc::new(Term::Application {
-                    function: Rc::new(Term::Atom { name: String::from("eq_symm") }),
-                    arguments: vec![Rc::new(Term::Atom { name: name.clone() })],
+                value: Some(Arc::new(Term::Application {
+                    function: Arc::new(Term::Atom { name: String::from("eq_symm") }),
+                    arguments: vec![Arc::new(Term::Atom { name: name.clone() })],
                 })),
                 location: None,
             });
@@ -506,20 +506,20 @@ impl Derivation {
 
     fn rewrite_in(&self,
                   prop_name: &String,
-                  prop_type: &Rc<Term>,
-                  t1: &Rc<Term>,
-                  t2: &Rc<Term>,
+                  prop_type: &Arc<Term>,
+                  t1: &Arc<Term>,
+                  t2: &Arc<Term>,
                   eq_name: &String,
                   new_terms: &mut Vec<Definition>) {
         for (rw, loc) in rewrite_all(&prop_type, &t1, &t2, String::new()).into_iter() {
             new_terms.push(
                 Definition {
                     dtype: rw,
-                    value: Some(Rc::new(Term::Application {
-                        function: Rc::new(Term::Atom { name: String::from("rewrite") }),
+                    value: Some(Arc::new(Term::Application {
+                        function: Arc::new(Term::Atom { name: String::from("rewrite") }),
                         arguments: vec![
-                            Rc::new(Term::Atom { name: eq_name.clone() }),
-                            Rc::new(Term::Atom { name: format!("{}@type{}", prop_name, loc) }),
+                            Arc::new(Term::Atom { name: eq_name.clone() }),
+                            Arc::new(Term::Atom { name: format!("{}@type{}", prop_name, loc) }),
                         ],
                     })),
                     location: None,
@@ -530,7 +530,7 @@ impl Derivation {
 
     // Returns whether there already exists an object in the context with the same value
     // (or same type, in case the type is a prop, because of proof irrelevance).
-    pub fn is_redundant(&self, dtype: &Rc<Term>, value: &Option<Rc<Term>>) -> bool {
+    pub fn is_redundant(&self, dtype: &Arc<Term>, value: &Option<Arc<Term>>) -> bool {
         if dtype.is_prop(&self.context_) {
             // Proof irrelevance - check for anything with this same type.
             self.inhabited_types.contains_key(dtype)
@@ -542,14 +542,14 @@ impl Derivation {
         }
     }
 
-    pub fn define_subterms(&mut self, t: &Rc<Term>, is_root: bool,
+    pub fn define_subterms(&mut self, t: &Arc<Term>, is_root: bool,
                            subterm_names: &mut Vec<String>,
                            path: &mut Vec<String>) {
         let is_builtin_app = is_intrinsic_application(t);
 
         let is_real_atom = match t.as_ref() {
             Term::Atom { name } => {
-                let real_type = Rc::new(Term::Atom { name: String::from(REAL_TYPE_CONST) });
+                let real_type = Arc::new(Term::Atom { name: String::from(REAL_TYPE_CONST) });
                 if is_real_const(name) && !self.is_redundant(&real_type, &Some(t.clone())) {
                     println!("DEPRECATED: atom {} being interpreted as rational literal", name);
                     self.existing_values.entry(t.clone()).or_insert_with(|| name.clone());
@@ -655,7 +655,7 @@ impl Derivation {
     // Otherwise, returns an Err with all the objects that were constructed by the action.
     pub fn show_by(&mut self, action: &String, target_type: &Term) -> Result<(), Vec<Definition>> {
         let results = self.application_results(action, &None, &vec![]);
-        let target_type = Rc::new(target_type.clone());
+        let target_type = Arc::new(target_type.clone());
         let target_type_e = target_type.eval(&self.context_);
 
         for def in results.iter() {
@@ -683,7 +683,7 @@ impl Derivation {
     pub fn application_results_with_preconditions(
         &self, action: &String,
         scope: &Option<Scope>,
-        preconditions: &Vec<Rc<Term>>,
+        preconditions: &Vec<Arc<Term>>,
         predetermined: &Vec<Option<String>>) -> Vec<Definition> {
         let mut new_terms = Vec::new();
 
@@ -705,7 +705,7 @@ impl Derivation {
                     let augmented_input_types = preconditions.iter().chain(input_types).cloned().collect();
 
                     self.nondeterministically_apply_arrow(
-                        &Rc::new(Term::Atom { name: action.clone() }),
+                        &Arc::new(Term::Atom { name: action.clone() }),
                         &augmented_input_types,
                         output_type,
                         &mut Vec::new(),
@@ -730,7 +730,7 @@ impl Derivation {
     // Checks if a type is inhabited in the current context, i.e., if we have any object
     // of that type. For proof objects, this amounts to knowing whether we have a proof
     // of the corresponding proposition. If so, returns the name of an object of the given type.
-    pub fn inhabited(&self, term_type: &Rc<Term>) -> Option<String> {
+    pub fn inhabited(&self, term_type: &Arc<Term>) -> Option<String> {
         for name in self.context_.insertion_order.iter() {
             if let Some(def) = self.context_.lookup(&name) {
                 if &def.dtype == term_type {
@@ -764,8 +764,8 @@ fn apply_builtin_binary_op(n1: Rational64, n2: Rational64, op: &str) -> Option<R
 // NOTE: This is a potentially conservative rewrite since we don't want to introduce occurrences
 // of bound variables, so here we don't recurse into arrows or lambdas. This is not limiting for
 // now, but something to think about for the future.
-fn rewrite_all(term: &Rc<Term>, source: &Rc<Term>, target: &Rc<Term>,
-               location: String) -> Vec<(Rc<Term>, String)> {
+fn rewrite_all(term: &Arc<Term>, source: &Arc<Term>, target: &Arc<Term>,
+               location: String) -> Vec<(Arc<Term>, String)> {
     let mut results = Vec::new();
 
     if term == source {
@@ -775,7 +775,7 @@ fn rewrite_all(term: &Rc<Term>, source: &Rc<Term>, target: &Rc<Term>,
 
     if let Term::Application { function, arguments } = term.as_ref() {
         for (alt, loc) in rewrite_all(function, source, target, format!("{}@0", location)).into_iter() {
-            results.push((Rc::new(Term::Application {
+            results.push((Arc::new(Term::Application {
                 function: alt,
                 arguments: arguments.clone(),
             }), loc));
@@ -784,7 +784,7 @@ fn rewrite_all(term: &Rc<Term>, source: &Rc<Term>, target: &Rc<Term>,
         for i in 0..arguments.len() {
             for (alt, loc) in rewrite_all(&arguments[i], source, target,
                                           format!("{}@{}", location, i+1)).into_iter() {
-                results.push((Rc::new(Term::Application {
+                results.push((Arc::new(Term::Application {
                     function: function.clone(),
                     arguments: arguments[..i].iter()
                                              .chain(once(&alt))
@@ -815,7 +815,7 @@ fn out_of_scope(name: &str, scope: &Option<Scope>) -> bool {
 #[cfg(test)]
 pub mod tests {
     use crate::universe::{Derivation, Context, Term, Definition};
-    use std::rc::Rc;
+    use std::sync::Arc;
     use num_rational::Rational64;
 
     #[test]
@@ -828,14 +828,14 @@ pub mod tests {
         assert_eq!(a.len(), 4);
 
         u.define("nat".to_string(), Definition::new_opaque(u.get_type_constant().clone()), false);
-        u.define("z".to_string(), Definition::new_opaque(Rc::new("nat".parse().unwrap())), false);
-        u.define("s".to_string(), Definition::new_opaque(Rc::new("[nat -> nat]".parse().unwrap())), false);
+        u.define("z".to_string(), Definition::new_opaque(Arc::new("nat".parse().unwrap())), false);
+        u.define("s".to_string(), Definition::new_opaque(Arc::new("[nat -> nat]".parse().unwrap())), false);
 
         let a = u.actions().collect::<Vec<&String>>();
         assert_eq!(a.len(), 5);
 
-        u.define("ss".to_string(), Definition::new_concrete(Rc::new("[nat -> nat]".parse().unwrap()),
-                                                            Rc::new("lambda (n : nat) (s (s n))"
+        u.define("ss".to_string(), Definition::new_concrete(Arc::new("[nat -> nat]".parse().unwrap()),
+                                                            Arc::new("lambda (n : nat) (s (s n))"
                                                                     .parse().unwrap())),
                  false);
         let a = u.actions().collect::<Vec<&String>>();

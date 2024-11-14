@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 use std::fmt;
 use itertools::Itertools;
 use crate::universe::{Derivation, Term, Unifier, Context};
@@ -16,18 +16,18 @@ use pest::error::{Error as PestError};
 #[derive(Clone, Debug)]
 pub struct Proof {
     pub name: String,
-    pub prop: Option<Rc<Term>>,
+    pub prop: Option<Arc<Term>>,
     pub actions: Vec<ProofScriptAction>
 }
 
 #[derive(Debug, Clone)]
 pub enum ProofError {
     ProofNotFound(String),
-    IntroFailed(String, Vec<Rc<Term>>),
-    StepFailed(&'static str, Rc<Term>, String, Vec<Rc<Term>>),
+    IntroFailed(String, Vec<Arc<Term>>),
+    StepFailed(&'static str, Arc<Term>, String, Vec<Arc<Term>>),
     GenericError(String),
-    GoalCheckFailed(String, Rc<Term>, Vec<Rc<Term>>),
-    GoalMissing(&'static str, Rc<Term>, String, Vec<Rc<Term>>),
+    GoalCheckFailed(String, Arc<Term>, Vec<Arc<Term>>),
+    GoalMissing(&'static str, Arc<Term>, String, Vec<Arc<Term>>),
     IncompleteProof(&'static str, Derivation)
 }
 
@@ -241,7 +241,7 @@ fn execute_proof_actions(u: &mut Derivation, actions: &[ProofScriptAction]) -> R
     }
 }
 
-fn execute_intro(u: &mut Derivation, name: &String) -> Result<Option<(String, Rc<Term>, Rc<Term>)>, ProofError> {
+fn execute_intro(u: &mut Derivation, name: &String) -> Result<Option<(String, Arc<Term>, Arc<Term>)>, ProofError> {
     if u.context().goals.len() != 1 {
         return Err(ProofError::IntroFailed(
             "Can only intro when there's a single goal.".to_string(),
@@ -266,7 +266,7 @@ fn execute_intro(u: &mut Derivation, name: &String) -> Result<Option<(String, Rc
 
         // 2- Make new goal:
         // 2a- Remove first input
-        let mut new_input_types : Vec<Rc<Term>> = input_types[1..].to_vec();
+        let mut new_input_types : Vec<Arc<Term>> = input_types[1..].to_vec();
         let mut new_output_type = output_type.clone();
 
         // 2b- Substitute new name in others
@@ -308,11 +308,11 @@ fn execute_intro(u: &mut Derivation, name: &String) -> Result<Option<(String, Rc
 
 fn enumerate_apply_goals(context: &Context,
                          unifier: &Unifier,
-                         input_types: &Vec<Rc<Term>>,
+                         input_types: &Vec<Arc<Term>>,
                          must_infer: &Vec<bool>,
                          current_index: usize,
-                         current_goals: &mut Vec<Rc<Term>>,
-                         result: &mut Vec<Vec<Rc<Term>>>) {
+                         current_goals: &mut Vec<Arc<Term>>,
+                         result: &mut Vec<Vec<Arc<Term>>>) {
 
     if current_index == input_types.len() {
         result.push(current_goals.clone());
@@ -377,12 +377,12 @@ pub struct ProofScriptAction {
 #[derive(Debug, Clone)]
 pub enum ProofScriptActionType {
     Definition(String, Definition),
-    Construct { name: Option<String>, type_: Option<Rc<Term>>, value: Option<Rc<Term>>, arrow: String },
+    Construct { name: Option<String>, type_: Option<Arc<Term>>, value: Option<Arc<Term>>, arrow: String },
     Apply(String),
-    Intro(String, Rc<Term>),
-    CheckGoal(Rc<Term>),
-    ProveGoal(Rc<Term>, Vec<ProofScriptAction>),
-    Have(Rc<Term>, Vec<ProofScriptAction>),
+    Intro(String, Arc<Term>),
+    CheckGoal(Arc<Term>),
+    ProveGoal(Arc<Term>, Vec<ProofScriptAction>),
+    Have(Arc<Term>, Vec<ProofScriptAction>),
     Halt(),
 }
 
@@ -526,11 +526,11 @@ pub enum ProofAction {
 
     // Forward steps.
     Construct(String),
-    SelectConstruction(bool, Rc<Term>, Rc<Term>),
+    SelectConstruction(bool, Arc<Term>, Arc<Term>),
 
     // Backward steps.
     Apply(String),
-    SelectGoals(Vec<Rc<Term>>),
+    SelectGoals(Vec<Arc<Term>>),
 }
 
 impl PartialEq for ProofAction {
@@ -592,7 +592,7 @@ pub struct ProofState {
 }
 
 impl ProofState {
-    pub fn new(premises: Vec<String>, goal: Rc<Term>) -> ProofState {
+    pub fn new(premises: Vec<String>, goal: Arc<Term>) -> ProofState {
         let mut d = Derivation::new();
         d.set_goals(vec![goal]);
 
@@ -739,13 +739,13 @@ impl ProofState {
         }
     }
 
-    pub fn goal(&self) -> Rc<Term> {
+    pub fn goal(&self) -> Arc<Term> {
         let gs = &self.derivation.context().goals;
         assert!(gs.len() == 1, "Invariant violated: each ProofState should have a single goal.");
         gs[0].clone()
     }
 
-    pub fn set_goal(&mut self, new_goal: Rc<Term>) {
+    pub fn set_goal(&mut self, new_goal: Arc<Term>) {
         self.derivation.context_.set_goals(vec![new_goal]);
     }
 

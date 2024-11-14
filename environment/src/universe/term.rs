@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 use std::vec::Vec;
 use std::borrow::BorrowMut;
 use std::collections::{HashMap, HashSet};
@@ -26,7 +26,7 @@ const PROP: &str = "prop";
 // This is used to simplify the test of whether a term has free variables.
 const PARAMETER_PREFIX: &str = "'";
 pub type VarSet = SmallSet<[String; 5]>;
-pub type Unifier = LinearMap<String, Rc<Term>>;
+pub type Unifier = LinearMap<String, Arc<Term>>;
 pub type TermLocation = Vec<usize>;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Location {
@@ -36,22 +36,22 @@ pub struct Location {
 
 #[derive(Clone, Debug)]
 pub enum Annotation {
-    ForwardAction { arrow: String, preconditions: Vec<Rc<Term>> },
+    ForwardAction { arrow: String, preconditions: Vec<Arc<Term>> },
     BackwardAction { arrow: String, must_infer: Vec<bool> },
 }
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    type_const: Rc<Term>, // The global constant `type` used to define other types.
-    prop_const: Rc<Term>, // The global constant `prop,` which is a type used to define propositions.
+    type_const: Arc<Term>, // The global constant `type` used to define other types.
+    prop_const: Arc<Term>, // The global constant `prop,` which is a type used to define propositions.
     definitions: HashMap<String, Vec<Definition>>, // Map of names to definitions.
     pub insertion_order: Vec<String>, // Order in which definitions were added.
     arrows: HashSet<String>, // Set of global definitions that are arrows.
 
-    pub goals: Vec<Rc<Term>>, // Set of open proof goals.
+    pub goals: Vec<Arc<Term>>, // Set of open proof goals.
 
-    pub(super) annotations: Rc<Vec<Annotation>>, // Set of open proof goals.
-    pub(super) proofs: Rc<Vec<Proof>>, // List of proofs.
+    pub(super) annotations: Arc<Vec<Annotation>>, // Set of open proof goals.
+    pub(super) proofs: Arc<Vec<Proof>>, // List of proofs.
 }
 
 pub type ProofResultNames<'a> = Map<std::slice::Iter<'a, Proof>,
@@ -60,17 +60,17 @@ pub type ProofResultNames<'a> = Map<std::slice::Iter<'a, Proof>,
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Definition {
-    pub dtype: Rc<Term>,
-    pub value: Option<Rc<Term>>,
+    pub dtype: Arc<Term>,
+    pub value: Option<Arc<Term>>,
     pub location: Option<Location>
 }
 
 impl Definition {
-    pub fn new_concrete(dtype: Rc<Term>, value: Rc<Term>) -> Definition {
+    pub fn new_concrete(dtype: Arc<Term>, value: Arc<Term>) -> Definition {
         Definition { dtype, value: Some(value), location: None }
     }
 
-    pub fn new_opaque(dtype: Rc<Term>) -> Definition {
+    pub fn new_opaque(dtype: Arc<Term>) -> Definition {
         Definition { dtype, value: None, location: None }
     }
 
@@ -97,8 +97,8 @@ impl Context {
     }
 
     pub fn new_with_builtins(builtin_arrows: &[&str]) -> Context {
-        let type_const = Rc::new(Term::Atom { name: TYPE.to_string() });
-        let prop_const = Rc::new(Term::Atom {name: PROP.to_string() });
+        let type_const = Arc::new(Term::Atom { name: TYPE.to_string() });
+        let prop_const = Arc::new(Term::Atom {name: PROP.to_string() });
         let type_const_def = Definition { dtype: type_const.clone(), value: None, location: None };
         let mut c = Context { definitions: HashMap::new(),
                               insertion_order: Vec::new(),
@@ -118,7 +118,7 @@ impl Context {
         c
     }
 
-    pub fn defining_term(&self, name: &String) -> Rc<Term> {
+    pub fn defining_term(&self, name: &String) -> Arc<Term> {
         if let Some(def) = self.lookup(name) {
             let dtype = def.dtype.eval(self);
 
@@ -148,7 +148,7 @@ impl Context {
         None
     }
 
-    pub fn inhabitant(&self, ttype: &Rc<Term>) -> Option<&String> {
+    pub fn inhabitant(&self, ttype: &Arc<Term>) -> Option<&String> {
         for (k, v) in self.definitions.iter() {
             if let Some(def) = v.last() {
                 if def.dtype.eval(self) == ttype.eval(self) {
@@ -159,9 +159,9 @@ impl Context {
         None
     }
 
-    pub fn inhabitants(&self, ttype: &Rc<Term>) -> Vec<String> {
+    pub fn inhabitants(&self, ttype: &Arc<Term>) -> Vec<String> {
         let ttype = ttype.eval(self);
-        let mut seen_before = HashSet::<Rc<Term>>::new();
+        let mut seen_before = HashSet::<Arc<Term>>::new();
 
         self.definitions.iter().filter_map(|(k, v)| {
             if let Some(def) = v.last() {
@@ -216,7 +216,7 @@ impl Context {
             self.define(proof.name.clone(), Definition::new_opaque(prop.clone()));
         }
 
-        Rc::make_mut(&mut self.proofs).push(proof);
+        Arc::make_mut(&mut self.proofs).push(proof);
     }
 
     pub fn incorporate(&mut self, ctx: Context) {
@@ -231,7 +231,7 @@ impl Context {
         }
 
         for annotation in ctx.annotations.iter() {
-            Rc::make_mut(&mut self.annotations).push(annotation.clone());
+            Arc::make_mut(&mut self.annotations).push(annotation.clone());
         }
 
     }
@@ -242,7 +242,7 @@ impl Context {
 
     // Sets a new value to a previously defined name.
     // FIXME This should not change its type, although that is not checked here.
-    pub fn set(&mut self, name: &String, value: Rc<Term>) {
+    pub fn set(&mut self, name: &String, value: Arc<Term>) {
         if let Some(v) = self.definitions.get_mut(name) {
             let idx = v.len() - 1;
             v[idx].value = Some(value);
@@ -257,11 +257,11 @@ impl Context {
         self.definitions.remove(name);
     }
 
-    pub fn with_goals(&self, new_goals: Vec<Rc<Term>>) -> Context {
+    pub fn with_goals(&self, new_goals: Vec<Arc<Term>>) -> Context {
         Context { goals: new_goals, ..self.clone() }
     }
 
-    pub fn set_goals(&mut self, new_goals: Vec<Rc<Term>>) {
+    pub fn set_goals(&mut self, new_goals: Vec<Arc<Term>>) {
         self.goals = new_goals;
     }
 
@@ -273,11 +273,11 @@ impl Context {
                                    .collect();
     }
 
-    pub fn get_type_constant(&self) -> &Rc<Term> {
+    pub fn get_type_constant(&self) -> &Arc<Term> {
         &self.type_const
     }
 
-    pub fn get_prop_constant(&self) -> &Rc<Term> {
+    pub fn get_prop_constant(&self) -> &Arc<Term> {
         &self.prop_const
     }
 
@@ -298,7 +298,7 @@ impl Context {
     }
 
     // Tests alpha-beta equivalency (term equality modulo evaluation and renaming of bound variables).
-    pub fn are_equivalent(&self, t1: &Rc<Term>, t2: &Rc<Term>) -> bool {
+    pub fn are_equivalent(&self, t1: &Arc<Term>, t2: &Arc<Term>) -> bool {
         alpha_equivalent(&t1.eval(self), &t2.eval(self), &mut vec![])
     }
 
@@ -385,7 +385,7 @@ impl FromStr for Context {
                 },
                 Rule::forward => {
                     let mut children : Vec<Pair<Rule>> = element.into_inner().collect();
-                    Rc::make_mut(&mut c.annotations).push(Annotation::ForwardAction {
+                    Arc::make_mut(&mut c.annotations).push(Annotation::ForwardAction {
                         arrow: children[0].as_str().to_string(),
                         preconditions: children.drain(1..)
                             .map(|r| parse_term(r, &mut HashMap::new()))
@@ -394,7 +394,7 @@ impl FromStr for Context {
                 },
                 Rule::backward => {
                     let children : Vec<Pair<Rule>> = element.into_inner().collect();
-                    Rc::make_mut(&mut c.annotations).push(Annotation::BackwardAction {
+                    Arc::make_mut(&mut c.annotations).push(Annotation::BackwardAction {
                         arrow: children[0].as_str().to_string(),
                         must_infer: children[1..]
                             .iter()
@@ -446,8 +446,8 @@ impl FromStr for Context {
     }
 }
 
-fn alpha_equivalent_sequences(it1: &mut dyn Iterator<Item=&Rc<Term>>,
-                              it2: &mut dyn Iterator<Item=&Rc<Term>>,
+fn alpha_equivalent_sequences(it1: &mut dyn Iterator<Item=&Arc<Term>>,
+                              it2: &mut dyn Iterator<Item=&Arc<Term>>,
                               renaming: &mut Vec<(String, String)>) -> bool {
     loop {
         match (it1.next(), it2.next()) {
@@ -462,7 +462,7 @@ fn alpha_equivalent_sequences(it1: &mut dyn Iterator<Item=&Rc<Term>>,
     }
 }
 
-fn alpha_equivalent(t1: &Rc<Term>, t2: &Rc<Term>, renaming: &mut Vec<(String, String)>) -> bool {
+fn alpha_equivalent(t1: &Arc<Term>, t2: &Arc<Term>, renaming: &mut Vec<(String, String)>) -> bool {
     match (t1.as_ref(), t2.as_ref()) {
         (Term::Atom { name: n1 },
          Term::Atom { name: n2 }) => {
@@ -519,14 +519,14 @@ pub(super) fn parse_definition(mut sub: Vec<Pair<Rule>>) -> (String, Definition)
     if sub[0].as_rule() == Rule::assume {
         assert_eq!(sub.len(), 1, "'assume' definition branch has a single child (the prop term).");
         let name = format!("__pobj{}", sub[0].as_span().split().0.pos());
-        let mut sub_children : Vec<Rc<Term>> = sub.remove(0).into_inner()
+        let mut sub_children : Vec<Arc<Term>> = sub.remove(0).into_inner()
             .map(|p| parse_term(p, &mut HashMap::new()))
             .collect();
         assert_eq!(sub_children.len(), 1, "'assume' rule has a single child (the prop term).");
         (name, Definition { dtype: sub_children.remove(0), value: None, location: None })
     } else {
         // Regular (named) declaration).
-        let mut children : Vec<Rc<Term>> = sub.drain(0..)
+        let mut children : Vec<Arc<Term>> = sub.drain(0..)
             .map(|p| parse_term(p, &mut HashMap::new()))
             .collect();
         let value = if children.len() == 2 { children.pop() } else { None };
@@ -563,18 +563,18 @@ impl ToString for Context {
 
 #[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub enum Term {
-    Declaration { name: String, dtype: Rc<Term> },
-    PatternDeclaration { pattern: Rc<Term>, dtype: Rc<Term> },
+    Declaration { name: String, dtype: Arc<Term> },
+    PatternDeclaration { pattern: Arc<Term>, dtype: Arc<Term> },
     Atom { name: String },
-    Arrow { input_types: Vec<Rc<Term>>, output_type: Rc<Term> },
-    Lambda { parameters: Vec<Rc<Term>>, body: Rc<Term> },
-    Application { function: Rc<Term>, arguments: Vec<Rc<Term>> },
+    Arrow { input_types: Vec<Arc<Term>>, output_type: Arc<Term> },
+    Lambda { parameters: Vec<Arc<Term>>, body: Arc<Term> },
+    Application { function: Arc<Term>, arguments: Vec<Arc<Term>> },
 }
 
-fn rename_param_declarations(t: &mut Rc<Term>) -> VarSet {
+fn rename_param_declarations(t: &mut Arc<Term>) -> VarSet {
     match t.clone().as_ref() {
         Term::Declaration { name, dtype } if !name.starts_with(PARAMETER_PREFIX) => {
-            *t = Rc::new(Term::Declaration { name: format!("{}{}", PARAMETER_PREFIX, name),
+            *t = Arc::new(Term::Declaration { name: format!("{}{}", PARAMETER_PREFIX, name),
                                              dtype: dtype.clone() });
             SmallSet::from_iter([name.clone()])
         },
@@ -582,14 +582,14 @@ fn rename_param_declarations(t: &mut Rc<Term>) -> VarSet {
     }
 }
 
-pub(super) fn parse_term(pair: Pair<Rule>, decls: &mut HashMap<String, usize>) -> Rc<Term> {
+pub(super) fn parse_term(pair: Pair<Rule>, decls: &mut HashMap<String, usize>) -> Arc<Term> {
     let rule = pair.as_rule();
     let s = pair.as_str();
     let mut sub : Vec<Pair<Rule>> = pair.into_inner().collect();
 
     match rule {
         Rule::lambda => {
-            let mut params : Vec<Rc<Term>> = Vec::new();
+            let mut params : Vec<Arc<Term>> = Vec::new();
             let mut param_names : Vec<String> = Vec::new();
 
             for s in sub.drain(0..sub.len() - 1) {
@@ -604,7 +604,7 @@ pub(super) fn parse_term(pair: Pair<Rule>, decls: &mut HashMap<String, usize>) -
             let body = parse_term(sub.pop().unwrap(), decls);
 
             // Append special prefix to all lambda parameters.
-            let t = Rc::new(Term::Lambda {
+            let t = Arc::new(Term::Lambda {
                 parameters: params,
                 body: body,
             });
@@ -616,31 +616,31 @@ pub(super) fn parse_term(pair: Pair<Rule>, decls: &mut HashMap<String, usize>) -
             t
         },
         Rule::declaration => {
-            let mut children : Vec<Rc<Term>> = sub.drain(0..).map(|p| parse_term(p, decls)).collect();
+            let mut children : Vec<Arc<Term>> = sub.drain(0..).map(|p| parse_term(p, decls)).collect();
             assert_eq!(children.len(), 2, "Declaration should have two children: pattern and type.");
             let dtype = children.pop().unwrap();
             let atom = children.pop().unwrap();
-            if let Term::Atom { name } = Rc::try_unwrap(atom).unwrap() {
-                Rc::new(Term::Declaration { name, dtype })
+            if let Term::Atom { name } = Arc::try_unwrap(atom).unwrap() {
+                Arc::new(Term::Declaration { name, dtype })
             } else {
                 panic!("First child of a Declaration node should be an atom.")
             }
         },
         Rule::pattern_declaration => {
-            let mut children : Vec<Rc<Term>> = sub.drain(0..).map(|p| parse_term(p, decls)).collect();
+            let mut children : Vec<Arc<Term>> = sub.drain(0..).map(|p| parse_term(p, decls)).collect();
             assert_eq!(children.len(), 2, "Declaration should have two children: pattern and type.");
             let dtype = children.pop().unwrap();
             let pattern = children.pop().unwrap();
-            Rc::new(Term::PatternDeclaration { pattern, dtype })
+            Arc::new(Term::PatternDeclaration { pattern, dtype })
         },
         Rule::atom => {
-            Rc::new(Term::Atom { name: format!("{}{}",
+            Arc::new(Term::Atom { name: format!("{}{}",
                                                if *decls.get(s).unwrap_or(&0) > 0 { PARAMETER_PREFIX }
                                                else { "" },
                                                s) })
         },
         Rule::arrow => {
-            let mut input_types : Vec<Rc<Term>> = Vec::new();
+            let mut input_types : Vec<Arc<Term>> = Vec::new();
             let mut param_names : Vec<String> = Vec::new();
 
             for s in sub.drain(0..sub.len() - 1) {
@@ -658,45 +658,45 @@ pub(super) fn parse_term(pair: Pair<Rule>, decls: &mut HashMap<String, usize>) -
                 *decls.get_mut(&p).unwrap() -= 1;
             }
 
-            Rc::new(Term::Arrow { input_types, output_type })
+            Arc::new(Term::Arrow { input_types, output_type })
         },
         Rule::application => {
-            let arguments : Vec<Rc<Term>> = sub.drain(1..).map(|p| parse_term(p, decls)).collect();
+            let arguments : Vec<Arc<Term>> = sub.drain(1..).map(|p| parse_term(p, decls)).collect();
             let function = parse_term(sub.pop().unwrap(), decls);
-            Rc::new(Term::Application { function, arguments })
+            Arc::new(Term::Application { function, arguments })
         },
         _ => unreachable!(),
     }
 }
 
 impl<'a> Term {
-    pub fn rc(&self) -> Rc<Term> {
-        Rc::new(self.clone())
+    pub fn rc(&self) -> Arc<Term> {
+        Arc::new(self.clone())
     }
 
-    pub fn in_context(self: &'a Rc<Term>, context: &'a Context) -> TermInContext<'a> {
+    pub fn in_context(self: &'a Arc<Term>, context: &'a Context) -> TermInContext<'a> {
         TermInContext { term: self, context }
     }
 
-    pub fn new_equality(lhs: Rc<Term>, rhs: Rc<Term>) -> Rc<Term> {
-        Rc::new(
+    pub fn new_equality(lhs: Arc<Term>, rhs: Arc<Term>) -> Arc<Term> {
+        Arc::new(
             Term::Application {
-                function: Rc::new(Term::Atom { name: "=".to_string() }),
+                function: Arc::new(Term::Atom { name: "=".to_string() }),
                 arguments: vec![lhs, rhs]
             }
         )
     }
 
-    pub fn is_prop(self: &Rc<Term>, ctx: &Context) -> bool {
+    pub fn is_prop(self: &Arc<Term>, ctx: &Context) -> bool {
         self.is_equality() || &self.get_type(ctx).get_type(ctx) == ctx.get_prop_constant()
     }
 
-    pub fn is_arrow(self: &Rc<Term>, ctx: &Context) -> bool {
+    pub fn is_arrow(self: &Arc<Term>, ctx: &Context) -> bool {
         matches!(self.eval(ctx).as_ref(),
                  Term::Arrow { input_types: _, output_type: _ })
     }
 
-    pub fn free_variables(self: &Rc<Term>) -> VarSet {
+    pub fn free_variables(self: &Arc<Term>) -> VarSet {
         match self.as_ref() {
             Term::Declaration { name: _, dtype } => dtype.free_variables(),
             Term::PatternDeclaration { pattern, dtype } => {
@@ -743,7 +743,7 @@ impl<'a> Term {
         }
     }
 
-    pub fn free_atoms(self: &Rc<Term>) -> VarSet {
+    pub fn free_atoms(self: &Arc<Term>) -> VarSet {
         match self.as_ref() {
             Term::Declaration { name: _, dtype } => dtype.free_atoms(),
             Term::PatternDeclaration { pattern, dtype } => {
@@ -786,7 +786,7 @@ impl<'a> Term {
         }
     }
 
-    pub fn get_type(self: &Rc<Term>, ctx: &Context) -> Rc<Term> {
+    pub fn get_type(self: &Arc<Term>, ctx: &Context) -> Arc<Term> {
         match self.as_ref() {
             Term::Declaration { name: _, dtype } => dtype.clone(),
             Term::PatternDeclaration { pattern: _, dtype } => dtype.clone(),
@@ -829,7 +829,7 @@ impl<'a> Term {
                     }
                 }
 
-                Rc::new(Term::Arrow {
+                Arc::new(Term::Arrow {
                     input_types: parameters.iter().map(|p| p.get_type(&ctx2)).collect(),
                     output_type: body.get_type(&ctx2)
                 })
@@ -883,7 +883,7 @@ impl<'a> Term {
                         if arguments.len() == input_types.len() {
                             output_type
                         } else {
-                            Rc::new(Term::Arrow { input_types, output_type })
+                            Arc::new(Term::Arrow { input_types, output_type })
                         }
                     },
                     _ => panic!("Ill-typed expression {}: applying arguments to a non-arrow.", self)
@@ -892,14 +892,14 @@ impl<'a> Term {
         }
     }
 
-    pub fn eval(self: &Rc<Term>, ctx: &Context) -> Rc<Term> {
+    pub fn eval(self: &Arc<Term>, ctx: &Context) -> Arc<Term> {
         match self.as_ref() {
             Term::Declaration { name, dtype } => {
-                Rc::new(Term::Declaration { name: name.clone(),
+                Arc::new(Term::Declaration { name: name.clone(),
                                             dtype: dtype.eval(ctx) })
             },
             Term::PatternDeclaration { pattern, dtype } => {
-                Rc::new(Term::PatternDeclaration { pattern: pattern.eval(ctx),
+                Arc::new(Term::PatternDeclaration { pattern: pattern.eval(ctx),
                                                    dtype: dtype.eval(ctx) })
             },
             Term::Atom { name } => {
@@ -939,16 +939,16 @@ impl<'a> Term {
 
                     let remaining = &p[arguments.len()..];
                     if !remaining.is_empty() {
-                        return Rc::new(Term::Lambda { parameters: remaining.to_vec(), body: b });
+                        return Arc::new(Term::Lambda { parameters: remaining.to_vec(), body: b });
                     }
                     return b;
                 } else if let Term::Application { function, arguments: first_args } = f.as_ref() {
                     let mut v = first_args.clone();
                     v.append(&mut arguments.clone());
-                    return Rc::new(Term::Application { function: function.clone(), arguments: v });
+                    return Arc::new(Term::Application { function: function.clone(), arguments: v });
                 }
 
-                Rc::new(Term::Application {
+                Arc::new(Term::Application {
                     function: function.clone(),
                     arguments: arguments.clone().iter().map(|v| v.eval(ctx)).collect()
                 })
@@ -956,7 +956,7 @@ impl<'a> Term {
         }
     }
 
-    pub fn apply_unifier(self: &Rc<Term>, u: &Unifier) -> Rc<Term> {
+    pub fn apply_unifier(self: &Arc<Term>, u: &Unifier) -> Arc<Term> {
         let mut t = self.clone();
         for (name, val) in u.iter() {
             t = t.replace(name, val);
@@ -964,10 +964,10 @@ impl<'a> Term {
         t
     }
 
-    pub fn replace(self: &Rc<Term>, r_name: &String, r_value: &Rc<Term>) -> Rc<Term> {
+    pub fn replace(self: &Arc<Term>, r_name: &String, r_value: &Arc<Term>) -> Arc<Term> {
         match self.as_ref() {
             Term::Declaration { name, dtype } => {
-                Rc::new(Term::Declaration {
+                Arc::new(Term::Declaration {
                     name: if name == r_name {
                         r_value.unwrap_parameter_term().unwrap_or(name.clone())
                     } else {
@@ -981,7 +981,7 @@ impl<'a> Term {
                 if self_params.contains(r_name) {
                     return self.clone()
                 }
-                Rc::new(Term::PatternDeclaration {
+                Arc::new(Term::PatternDeclaration {
                     pattern: pattern.replace(r_name, r_value),
                     dtype: dtype.replace(r_name, r_value),
                 })
@@ -1003,7 +1003,7 @@ impl<'a> Term {
                     }
                 }
 
-                Rc::new(Term::Arrow {
+                Arc::new(Term::Arrow {
                     input_types: input_types.clone().iter().map(|v| v.replace(r_name, r_value)).collect(),
                     output_type: output_type.replace(r_name, r_value),
                 })
@@ -1023,10 +1023,10 @@ impl<'a> Term {
                 for i in 0..parameters.len() {
                     parameters[i] = parameters[i].replace(r_name, r_value);
                 }
-                Rc::new(Term::Lambda { parameters, body: body.replace(r_name, r_value) })
+                Arc::new(Term::Lambda { parameters, body: body.replace(r_name, r_value) })
             },
             Term::Application { function, arguments } => {
-                Rc::new(Term::Application {
+                Arc::new(Term::Application {
                     function: function.replace(r_name, r_value),
                     arguments: arguments.clone().iter().map(|a| a.replace(r_name, r_value)).collect()
                 })
@@ -1037,7 +1037,7 @@ impl<'a> Term {
     // Tries to unify the parameters (e.g., $a) in `self` with the concrete terms in `concrete`.
     // If succeeds, returns the unification map in `mapping`, and returns true. Otherwise,
     // returns false, and the partial mapping should be ignored.
-    pub fn unify_params(self: &Rc<Term>, concrete: &Rc<Term>, mapping: &mut Unifier) -> bool {
+    pub fn unify_params(self: &Arc<Term>, concrete: &Arc<Term>, mapping: &mut Unifier) -> bool {
         match (self.as_ref(), concrete.as_ref()) {
             // self is an atom which is a parameter name.
             (Term::Atom { name: pname }, t) if is_parameter_name(pname) => {
@@ -1085,14 +1085,14 @@ impl<'a> Term {
         }
     }
 
-    fn unwrap_parameter_term(self: &Rc<Term>) -> Option<String> {
+    fn unwrap_parameter_term(self: &Arc<Term>) -> Option<String> {
         match self.as_ref() {
             Term::Atom { name } if is_parameter_name(name) => { Some(name.clone()) }
             _ => None,
         }
     }
 
-    pub fn ndunify(self: &Rc<Term>, concrete: &Rc<Term>, context: &mut Context)
+    pub fn ndunify(self: &Arc<Term>, concrete: &Arc<Term>, context: &mut Context)
                    -> Vec<Unifier> {
 
         match (self.as_ref(), concrete.as_ref()) {
@@ -1280,7 +1280,7 @@ impl<'a> Term {
         false
     }
 
-    fn find_all(self: &Rc<Term>, target: &Rc<Term>) -> Vec<TermLocation> {
+    fn find_all(self: &Arc<Term>, target: &Arc<Term>) -> Vec<TermLocation> {
         if self == target {
             return vec![vec![]];
         }
@@ -1337,7 +1337,7 @@ impl<'a> Term {
         results
     }
 
-    fn replace_at(self: &Rc<Term>, location: &[usize], target: &Rc<Term>) -> Rc<Term> {
+    fn replace_at(self: &Arc<Term>, location: &[usize], target: &Arc<Term>) -> Arc<Term> {
         if location.len() == 0 {
             return target.clone();
         }
@@ -1397,7 +1397,7 @@ impl<'a> Term {
         }
     }
 
-    pub fn extract_equality(self: &Term) -> Option<(Rc<Term>, Rc<Term>)> {
+    pub fn extract_equality(self: &Term) -> Option<(Arc<Term>, Arc<Term>)> {
         if let Term::Application { function, arguments } = &self {
             if let Term::Atom { name } = function.as_ref() {
                 if name == "=" {
@@ -1410,15 +1410,15 @@ impl<'a> Term {
         None
     }
 
-    pub fn make_equality_object(t1: Rc<Term>, t2: Rc<Term>) -> Rc<Term> {
-        Rc::new(
+    pub fn make_equality_object(t1: Arc<Term>, t2: Arc<Term>) -> Arc<Term> {
+        Arc::new(
             Term::Application {
-                function: Rc::new(Term::Atom { name: "=".to_string() }),
+                function: Arc::new(Term::Atom { name: "=".to_string() }),
                 arguments: vec![t1.clone(), t2.clone()],
             })
     }
 
-    pub fn fmt_in_context(self: &Rc<Term>, context: &Context, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub fn fmt_in_context(self: &Arc<Term>, context: &Context, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.as_ref() {
             Term::Atom { name } => {
                 if name.contains('@') {
@@ -1479,16 +1479,16 @@ impl<'a> Term {
     }
 
     // Expands a term in context by adding implicit arguments to applications.
-    pub fn elaborate(self: &Rc<Term>, ctx: &Context) -> Rc<Term> {
+    pub fn elaborate(self: &Arc<Term>, ctx: &Context) -> Arc<Term> {
         // Right now, the only implicit arguments are for the equality type, so that
         // is the only interesting case.
         match self.as_ref() {
             Term::Atom { name: _ } => self.clone(),
             Term::Declaration { name, dtype } => {
-                Rc::new(Term::Declaration { name: name.clone(), dtype: dtype.elaborate(ctx) })
+                Arc::new(Term::Declaration { name: name.clone(), dtype: dtype.elaborate(ctx) })
             },
             Term::PatternDeclaration { pattern, dtype } => {
-                Rc::new(Term::PatternDeclaration { pattern: pattern.elaborate(ctx),
+                Arc::new(Term::PatternDeclaration { pattern: pattern.elaborate(ctx),
                                                    dtype: dtype.elaborate(ctx) })
             },
             Term::Arrow { input_types, output_type } => {
@@ -1500,21 +1500,21 @@ impl<'a> Term {
                     match t.as_ref() {
                         Term::Declaration { name, dtype } => {
                             new_input_types.push(
-                                Rc::new(Term::Declaration { name: name.clone(),
+                                Arc::new(Term::Declaration { name: name.clone(),
                                                             dtype: dtype.elaborate(&new_context) }));
                             new_context.define(name.clone(), Definition::new_opaque(dtype.clone()));
                         },
                         _ => new_input_types.push(t.elaborate(ctx)),
                     }
                 }
-                Rc::new(Term::Arrow { input_types: new_input_types,
+                Arc::new(Term::Arrow { input_types: new_input_types,
                                       output_type: output_type.elaborate(&new_context) })
             },
             Term::Application { function, arguments } => {
                 // If function is equality, elaborate the first implicit argument.
                 if let Term::Atom { name } = function.as_ref() {
                     if name == "=" {
-                        return Rc::new(Term::Application {
+                        return Arc::new(Term::Application {
                             function: function.clone(),
                             arguments: vec![arguments[0].get_type(ctx),
                                             arguments[0].clone(),
@@ -1527,7 +1527,7 @@ impl<'a> Term {
                 for a in arguments.iter() {
                     new_arguments.push(a.elaborate(ctx));
                 }
-                Rc::new(Term::Application { function: elaborated_function, arguments: new_arguments })
+                Arc::new(Term::Application { function: elaborated_function, arguments: new_arguments })
             },
             Term::Lambda { parameters, body } => {
                 // Iterates over the parameters, and if any of them is a declaration,
@@ -1538,52 +1538,52 @@ impl<'a> Term {
                     match p.as_ref() {
                         Term::Declaration { name, dtype } => {
                             new_parameters.push(
-                                Rc::new(Term::Declaration { name: name.clone(),
+                                Arc::new(Term::Declaration { name: name.clone(),
                                                             dtype: dtype.elaborate(&new_context) }));
                             new_context.define(name.clone(), Definition::new_opaque(dtype.clone()));
                         },
                         _ => new_parameters.push(p.elaborate(ctx)),
                     }
                 }
-                Rc::new(Term::Lambda { parameters: new_parameters,
+                Arc::new(Term::Lambda { parameters: new_parameters,
                                        body: body.elaborate(&new_context) })
             }
         }
     }
 
     // Removes implicit arguments from a term.
-    pub fn contract(self: &Rc<Term>) -> Rc<Term> {
+    pub fn contract(self: &Arc<Term>) -> Arc<Term> {
         // Right now, the only implicit arguments are for the equality type, so that
         // is the only interesting case.
         match self.as_ref() {
             Term::Atom { name: _ } => self.clone(),
             Term::Declaration { name, dtype } => {
-                Rc::new(Term::Declaration { name: name.clone(), dtype: dtype.contract() })
+                Arc::new(Term::Declaration { name: name.clone(), dtype: dtype.contract() })
             },
             Term::PatternDeclaration { pattern, dtype } => {
-                Rc::new(Term::PatternDeclaration { pattern: pattern.contract(),
+                Arc::new(Term::PatternDeclaration { pattern: pattern.contract(),
                                                    dtype: dtype.contract() })
             },
             Term::Arrow { input_types, output_type } => {
-                Rc::new(Term::Arrow { input_types: input_types.iter().map(|t| t.contract()).collect(),
+                Arc::new(Term::Arrow { input_types: input_types.iter().map(|t| t.contract()).collect(),
                                       output_type: output_type.contract() })
             },
             Term::Application { function, arguments } => {
                 // If function is equality and the argument is explicit, remove the type argument.
                 if let Term::Atom { name } = function.as_ref() {
                     if name == "=" && arguments.len() == 3 {
-                        return Rc::new(Term::Application {
+                        return Arc::new(Term::Application {
                             function: function.clone(),
                             arguments: vec![arguments[1].clone(),
                                             arguments[2].clone()]});
                     }
                 }
                 // Otherwise, just contract the function and arguments.
-                Rc::new(Term::Application { function: function.contract(),
+                Arc::new(Term::Application { function: function.contract(),
                                            arguments: arguments.iter().map(|a| a.contract()).collect() })
             },
             Term::Lambda { parameters, body } => {
-                Rc::new(Term::Lambda { parameters: parameters.iter().map(|p| p.contract()).collect(),
+                Arc::new(Term::Lambda { parameters: parameters.iter().map(|p| p.contract()).collect(),
                                        body: body.contract() })
             }
         }
@@ -1595,7 +1595,7 @@ impl FromStr for Term {
 
     fn from_str(s : &str) -> Result<Term, PestError<Rule>> {
         let root = TermParser::parse(Rule::term, s)?.next().unwrap();
-        Ok(Rc::try_unwrap(parse_term(root, &mut HashMap::new())).unwrap())
+        Ok(Arc::try_unwrap(parse_term(root, &mut HashMap::new())).unwrap())
     }
 }
 
@@ -1640,7 +1640,7 @@ impl fmt::Display for Term {
 }
 
 pub struct TermInContext<'a> {
-    term: &'a Rc<Term>,
+    term: &'a Arc<Term>,
     context: &'a Context,
 }
 
@@ -1654,7 +1654,7 @@ pub fn is_parameter_name(name: &str) -> bool {
     return name.starts_with(PARAMETER_PREFIX);
 }
 
-pub fn is_intrinsic_application(t: &Rc<Term>) -> bool {
+pub fn is_intrinsic_application(t: &Arc<Term>) -> bool {
     match t.as_ref() {
         Term::Application { function, arguments: _ } => {
             match function.as_ref() {
@@ -1671,7 +1671,7 @@ pub fn is_intrinsic_application(t: &Rc<Term>) -> bool {
 
 pub mod tests {
     #![allow(unused_imports)]
-    use std::rc::Rc;
+    use std::sync::Arc;
     use crate::universe::term::{Context, Term, Definition, Unifier, alpha_equivalent};
     use crate::universe::{VarSet};
 
@@ -1679,7 +1679,7 @@ pub mod tests {
     fn build_context() {
         let mut c = Context::new();
 
-        let atom = Rc::new(Term::Atom { name: "asdf".to_string() });
+        let atom = Arc::new(Term::Atom { name: "asdf".to_string() });
         let def = Definition::new_opaque(atom);
 
         c.define("x".to_string(), def.clone());
@@ -1887,8 +1887,8 @@ pub mod tests {
             "x : nat. x0 : nat.")
             .parse().unwrap();
 
-        let t : Rc<Term> = "(lambda ('c : nat) (= (+ x 'c) x0))".parse::<Term>().unwrap().rc();
-        let t2 : Rc<Term> = "['t -> prop]".parse::<Term>().unwrap().rc();
+        let t : Arc<Term> = "(lambda ('c : nat) (= (+ x 'c) x0))".parse::<Term>().unwrap().rc();
+        let t2 : Arc<Term> = "['t -> prop]".parse::<Term>().unwrap().rc();
 
         let mut u = Unifier::new();
         assert!(t2.unify_params(&t.get_type(&context), &mut u));
@@ -1908,15 +1908,15 @@ pub mod tests {
             "s : [nat -> nat].\n")
             .parse().unwrap();
 
-        let t : Rc<Term> = "[('a : nat) -> (= 'a 'a)]".parse::<Term>().unwrap().rc();
+        let t : Arc<Term> = "[('a : nat) -> (= 'a 'a)]".parse::<Term>().unwrap().rc();
         assert_eq!(t.elaborate(&context).to_string(), "[('a : nat) -> (= nat 'a 'a)]");
         assert_eq!(t.elaborate(&context).contract().to_string(), t.to_string());
 
-        let t : Rc<Term> = "(= (+ z z) z)".parse::<Term>().unwrap().rc();
+        let t : Arc<Term> = "(= (+ z z) z)".parse::<Term>().unwrap().rc();
         assert_eq!(t.elaborate(&context).to_string(), "(= nat (+ z z) z)");
         assert_eq!(t.elaborate(&context).contract().to_string(), t.to_string());
 
-        let t : Rc<Term> = "(lambda ('x : nat) [('a : nat) -> (= (n2i 'a) (n2i 'x))])".parse::<Term>().unwrap().rc();
+        let t : Arc<Term> = "(lambda ('x : nat) [('a : nat) -> (= (n2i 'a) (n2i 'x))])".parse::<Term>().unwrap().rc();
         assert_eq!(t.elaborate(&context).to_string(), "(lambda ('x : nat) [('a : nat) -> (= int (n2i 'a) (n2i 'x))])");
         assert_eq!(t.elaborate(&context).contract().to_string(), t.to_string());
     }

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 use colored::Colorize;
 
 use rustyline::error::ReadlineError;
@@ -74,7 +74,7 @@ impl Shell {
     pub fn is_inhabited(&self, type_str: &str) -> Result<Option<String>, String> {
         match type_str.parse::<Term>() {
             Err(e) => Err(e.to_string()),
-            Ok(t) => Ok(self.universe.inhabited(&Rc::new(t))),
+            Ok(t) => Ok(self.universe.inhabited(&Arc::new(t))),
         }
     }
 
