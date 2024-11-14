@@ -1,0 +1,18 @@
+type: fleet
+
+name: pdoom
+
+# env: # Add env variables / docker configs as needed here
+
+nodes: 1
+# Ensures instances are interconnected (i.e: provisioned in the same region. Works well for pdoom)
+placement: cluster 
+
+# Use either spot or on-demand instances
+spot_policy: auto
+
+resources:
+  gpu:
+    # vRAM
+    memory: 24GB..
+    count: 1..
