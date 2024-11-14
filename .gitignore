@@ -8,3 +8,6 @@ learning/outputs/
 uv.lock
 outputs/
 .venv/
+learning/easy-submit*
+plotting/grafana*
+plotting/influxdb*
