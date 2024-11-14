@@ -112,6 +112,7 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
                 log.info('All final goals proven - stopping learning loop...')
                 mle_log.update({'num_iterations': i},
                            {'final_goals_proven': final_goals_proven})
+                mle_log.save()
                 break
 
             # 1- Run conjecturing model to obtain N conjectures.
