@@ -14,5 +14,5 @@ spot_policy: auto
 resources:
   gpu:
     # vRAM
-    memory: 24GB..
+    memory: 24GB.. 
     count: 1..

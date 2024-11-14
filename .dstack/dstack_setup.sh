@@ -12,8 +12,8 @@ projects:
       - type: aws
         creds:
           type: access_key
-          access_key:  your_access_token <------------------------------------ REPLACE
-          secret_key:  your_secret_token <------------------------------------ REPLACE
+          access_key:  your_access_token <------------------------------------ REPLACE 
+          secret_key:  your_secret_token <------------------------------------ REPLACE 
 EOL
 
 #Runs the server.
