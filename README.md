@@ -83,10 +83,24 @@ The entry point for the conjecture-prove loop is in [learning/bootstrap.py](boot
 [learning] $ python bootstrap.py theory=groups
 ```
 
-We use hydra for configuration -- the relevant file here is [config/bootstrap.yaml](config/bootstrap.yaml). This will run the loop in "sequential" mode, in a single process. There is a distributed mode, backed by a [https://docs.celeryq.dev/en/stable/](Celery queue), that you can use to leverage multiple CPUs/GPUs, either in the same or different machines (it doesn't matter, as long as they can connect to the queue). The setup is a bit manual: you must first spin up a Redis server, then run Celery worker processes backed by the Redis server, and finally run bootstrap.py with a DISTRIBUTED=1 environment variable:
+We use hydra for configuration -- the relevant file here is [config/bootstrap.yaml](config/bootstrap.yaml). This will run the loop in "sequential" mode, in a single process. There is a distributed mode, backed by a [https://docs.celeryq.dev/en/stable/](Celery queue), that you can use to leverage multiple CPUs/GPUs, either in the same or different machines (it doesn't matter, as long as they can connect to the queue).
 
-```sh
-[learning] $ DISTRIBUTED=1 python bootstrap.py theory=groups
+The setup is a bit manual:
+1. Build the redis container
+```
+apptainer build redis.sif redis.def
+```
+1. Start the redis container
+```
+sh launch/start_redis.sh
+```
+2. Run Celery worker process
+```
+sh launch/start_worker.sh
+```
+3. Run bootstrap.py in distributed mode
+```
+sh launch/run_bootstrap_distributed.sh
 ```
 
 Feel free to open an issue if you're interested in setting this up, and I can expand on the documentation. The details might get a little bit cluster-specific, though the general setup is just that you need (a) a Redis server, (b) a number of worker processes that connect to it, and (c) a teacher process that runs the bootstrapping loop, also connecting to the same Redis server.
