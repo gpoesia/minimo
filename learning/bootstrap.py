@@ -125,13 +125,14 @@ async def teacher_loop(cfg: DictConfig, mle_log: MLELogger):
                 proposal = sample_conjecture(AgentLM(agent, 'Conj:(hard) '), context)
 
                 if proposal and proposal not in conjectures + proven_conjectures:
-                    conjectures.append(proposal)
-                    progress_bar.update(1)
+                    contracted_proposal = d.contract(proposal)
+                    if contracted_proposal and contracted_proposal not in conjectures + proven_conjectures:
+                        conjectures.append(contracted_proposal)
+                        progress_bar.update(1)
 
             progress_bar.close()
 
             # Contract conjectures to make them Peano-parseable.
-            conjectures = [d.contract(c) for c in conjectures]
             conjectured_final_goals = set(conjectures) & set(final_goals_formatted)
 
             log.info('Done making %d conjectures', len(conjectures))
