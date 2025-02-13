@@ -1109,7 +1109,7 @@ def visualize_search_tree(root, path, min_visits=0):
 def run_proof_search_agent(config):
     if config.get('agent_path'):
         print('Loading from checkpoint', config.agent_path)
-        agent = torch.load(config.agent_path)
+        agent = torch.load(config.agent_path, weights_only=False)
         begin = config.skip
         print('Begin =', begin)
     else:
@@ -1154,7 +1154,7 @@ def test_agent(config: DictConfig):
     problem = problemset.initialize_problem(config.problem)
 
     if agent_path is not None:
-        agent = torch.load(agent_path)
+        agent = torch.load(agent_path, weights_only=False)
         if 'mcts_iterations' in config:
             agent._max_mcts_nodes = config.mcts_iterations
         root = agent.proof_search(config.problem, problem).root
@@ -1236,7 +1236,7 @@ def test_proof_search(problemset='lean-library-logic',
     root = TreeSearchNode(HolophrasmNode([state]))
 
     if agent_path is not None:
-        pi = torch.load(agent_path)
+        pi = torch.load(agent_path, weights_only=False)
         if hasattr(pi, '_policy'):
             pi = pi._policy
         pi._lm.eval()
@@ -1292,7 +1292,7 @@ def test_proof_search(problemset='lean-library-logic',
 
 def make_agent(config):
     if config.get('agent_path'):
-        agent = torch.load(config['agent_path'])
+        agent = torch.load(config['agent_path'], weights_only=False)
     elif config.agent.get('type') == 'curiosity':
         import pretraining
         agent = pretraining.CuriosityGuidedProofSearchAgent(config.agent)
@@ -1302,7 +1302,7 @@ def make_agent(config):
     if config.agent.get('lm_path'):
         path = config.agent.get('lm_path')
         print('Loading LM policy from', path)
-        agent._policy = torch.load(path)
+        agent._policy = torch.load(path, weights_only=False)
 
     if config.agent.get('training_set'):
         with open(config.agent.training_set) as f:

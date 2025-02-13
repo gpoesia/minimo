@@ -44,7 +44,7 @@ app.conf.accept_content = ['application/json', 'application/x-python-serialize']
 @app.task
 def try_prove(agent_dump: bytes, theory: BackgroundTheory, statement: str) -> StudentResult:
     with io.BytesIO(agent_dump) as f:
-        agent = torch.load(f)
+        agent = torch.load(f, weights_only=False)
 
     print('Proving', statement, 'on', agent._policy._lm._lm.device)
 
