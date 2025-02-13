@@ -83,7 +83,7 @@ The entry point for the conjecture-prove loop is in [learning/bootstrap.py](boot
 [learning] $ python bootstrap.py theory=groups
 ```
 
-We use hydra for configuration -- the relevant file here is [config/bootstrap.yaml](config/bootstrap.yaml). This will run the loop in "sequential" mode, in a single process. There is a distributed mode, backed by a [https://docs.celeryq.dev/en/stable/](Celery queue), that you can use to leverage multiple CPUs/GPUs, either in the same or different machines (it doesn't matter, as long as they can connect to the queue). The setup is a bit manual: you must first spin up a Redis server, then run Celery worker processes backed by the Redis server, and finally run bootstrap.py with a DISTRIBUTED=1 environment variable:
+We use hydra for configuration -- the relevant file here is [config/bootstrap.yaml](config/bootstrap.yaml). This will run the loop in "sequential" mode, in a single process. There is a distributed mode, backed by a [Celery queue](https://docs.celeryq.dev/en/stable/), that you can use to leverage multiple CPUs/GPUs, either in the same or different machines (it doesn't matter, as long as they can connect to the queue). The setup is a bit manual: you must first spin up a Redis server, then run Celery worker processes backed by the Redis server, and finally run bootstrap.py with a DISTRIBUTED=1 environment variable:
 
 ```sh
 [learning] $ DISTRIBUTED=1 python bootstrap.py theory=groups
