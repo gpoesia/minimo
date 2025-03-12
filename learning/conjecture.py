@@ -385,7 +385,7 @@ def sample_conjecture(lm, context, max_it=100):
 
         choice = ''
 
-        while choice not in completions:
+        while completions != ['']:
             # Compute maximum common prefix among all completions.
             max_common_prefix_len = 0
 
