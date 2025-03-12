@@ -1,0 +1,30 @@
+1. A -> A
+2. A -> B, B -> C, A -> C
+3. (A -> (B -> C)) -> ((B -> (A -> C))
+4. (A -> (B -> C)) -> (and A B) -> C
+5. ((and A B) -> C) -> (A -> (B -> C))
+6. (A -> B) -> ((B -> C) -> (A -> C))
+7. (A -> B) -> ((C -> A) -> (C -> B))
+8a. (A -> B) -> ((and A C) -> (and B C))
+8b. (A -> B) -> ((and C A) -> (and C B))
+9a. (A -> B) -> ((or A C) -> (or B C))
+9b. (A -> B) -> ((or A C) -> (or B C))
+10a. (not A) -> (A -> B)
+10b. A -> ((not A) -> B)
+11. B -> (A -> B)
+12. (A -> B) -> ((not B) -> (not A))
+13. (A -> (not B)) -> (B -> (not A))
+14. ((not A) -> B) -> ((not B) -> A)
+15. ((not A) -> (not B)) -> (B -> A)
+16. (A -> B) -> (B -> A) -> (iff A B)
+17a. (iff A B) -> (A -> B)
+17b. (iff A B) -> (B -> A)
+18a. (iff A B) -> A -> B
+18b. (iff A B) -> B -> A
+19. (iff A A)
+20. (iff A B) -> (iff B A)
+21. (iff A B) -> (iff B C) -> (iff A C)
+22. (A -> (B -> C)) -> (not (not A)) -> ((not (not B))) -> (not (not C))
+23. (not (not (A -> B))) -> (not (not A)) -> (not (not B))
+24. (not (not (A -> B))) -> (not (not (B -> C))) -> (not (not (A -> C)))
+25. (iff (not (not (and A B))) (and (not (not A)) (not (not B))))
