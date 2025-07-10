@@ -110,6 +110,24 @@ impl Derivation {
         }
     }
 
+    pub fn with_declarations_up_to(&self, name: &str) -> Derivation {
+        let mut derivation = Derivation::new();
+
+        for d in self.context_.insertion_order.iter() {
+            if d == name {
+                break;
+            }
+            if derivation.context_.lookup(d).is_some() {
+                continue;
+            }
+            if let Some(def) = self.context_.lookup(d) {
+                derivation.define(d.clone(), def.clone(), false);
+            }
+        }
+
+        derivation
+    }
+
     pub fn size(&self) -> usize {
         self.context_.insertion_order.len()
     }

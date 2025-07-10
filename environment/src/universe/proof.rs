@@ -36,14 +36,16 @@ impl Proof {
         &self.name
     }
 
-    pub fn execute(&self, u: &mut Derivation) -> Result<(), ProofError> {
+    pub fn execute(&self, u: &Derivation) -> Result<(), ProofError> {
+        let mut u = u.with_declarations_up_to(self.name.as_str());
+
         if let Some(prop) = &self.prop {
             u.set_goals(vec![prop.clone()]);
             let goal_name = u.context().get_fresh_name(&"goal".to_string());
             u.define_subterms(prop, false, &mut vec![], &mut vec![goal_name]);
         }
 
-        execute_proof_actions(u, &self.actions)
+        execute_proof_actions(&mut u, &self.actions)
     }
 }
 
